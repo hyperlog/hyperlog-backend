@@ -12,6 +12,7 @@ django-graphql-jwt = "^0.3.1"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.8.2"
+black = "^19.10b0"
 
 [build-system]
 requires = ["poetry>=0.12"]
