@@ -1,3 +1,15 @@
 from django.contrib import admin
 
-# Register your models here.
+from apps.profiles.models import (
+    BaseProfileModel,
+    BitbucketProfile,
+    EmailAddress,
+    GithubProfile,
+    GitlabProfile,
+)
+
+admin.site.register(BaseProfileModel)
+admin.site.register(BitbucketProfile)
+admin.site.register(EmailAddress)
+admin.site.register(GithubProfile)
+admin.site.register(GitlabProfile)

@@ -1,4 +1,5 @@
 import graphene
+import graphql_jwt
 from graphene_django import DjangoObjectType
 
 from django.contrib.auth import logout
