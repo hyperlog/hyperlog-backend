@@ -25,12 +25,15 @@ class Query(graphene.ObjectType):
     users = graphene.List(UserType)
     profile = graphene.Field(UserType)
 
-    def resolve_user(cls, info, id, **kwargs):
-        return User.objects.get(id=id)
+    @staticmethod
+    def resolve_user(cls, info, **kwargs):
+        return User.objects.get(id=kwargs.get("id"))
 
+    @staticmethod
     def resolve_users(cls, info, **kwargs):
         return User.objects.all()
 
+    @staticmethod
     def resolve_profile(cls, info, **kwargs):
         if info.context.user.is_authenticated:
             return info.context.user
