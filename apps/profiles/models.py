@@ -14,7 +14,7 @@ class EmailAddress(models.Model):
 class BaseProfileModel(models.Model):
     _provider = models.CharField(max_length=20)
     username = models.CharField(
-        max_lenght=255
+        max_length=255
     )  # Gitlab allows up to 255 chars
     access_token = models.CharField(max_length=255)
     user = models.ForeignKey(
