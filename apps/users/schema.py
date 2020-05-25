@@ -24,7 +24,7 @@ class UserType(DjangoObjectType):
 class Query(graphene.ObjectType):
     user = graphene.Field(UserType, id=graphene.Int(required=True))
     users = graphene.List(UserType)
-    profile = graphene.Field(UserType)
+    this_user = graphene.Field(UserType)
 
     @staticmethod
     def resolve_user(cls, info, **kwargs):
@@ -35,7 +35,7 @@ class Query(graphene.ObjectType):
         return User.objects.all()
 
     @staticmethod
-    def resolve_profile(cls, info, **kwargs):
+    def resolve_this_user(cls, info, **kwargs):
         if info.context.user.is_authenticated:
             return info.context.user
 
@@ -51,7 +51,7 @@ class Register(graphene.Mutation):
         first_name = graphene.String(required=True)
         last_name = graphene.String(required=True)
 
-    def mutate(email, username, password, first_name, last_name):
+    def mutate(self, info, email, username, password, first_name, last_name):
         if User.objects.filter(email__iexact=email).exists():
             errors = ["emailAlreadyExists"]
             return Register(success=False, errors=errors)

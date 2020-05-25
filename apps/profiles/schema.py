@@ -1,7 +1,7 @@
 import graphene
 from graphene_django import DjangoObjectType
 
-from apps.profiles.models import BaseProfileModel, EmailAddress
+from apps.profiles.models import BaseProfileModel, EmailAddress, GithubProfile
 
 
 class ProfileType(DjangoObjectType):
@@ -25,10 +25,48 @@ class EmailAddressType(DjangoObjectType):
 
 
 class Query(graphene.ObjectType):
-    # TODO
-    pass
+    profiles = graphene.List(ProfileType, provider=graphene.String())
+    profile = graphene.Field(ProfileType, id=graphene.Int(required=True))
+    profile_emails = graphene.List(EmailAddressType)
+
+    def resolve_profiles(self, info, **kwargs):
+        """
+        Returns all profiles with given provider or simply all profiles if it
+        is not mentioned
+        """
+        if kwargs.get("provider"):
+            return BaseProfileModel.objects.filter(
+                _provider=kwargs.get("provider")
+            )
+
+        return BaseProfileModel.all()
+
+    def resolve_profile(self, info, **kwargs):
+        return BaseProfileModel.get(id=kwargs.get("id"))
+
+    def resolve_profile_emails(self, info, **kwargs):
+        return EmailAddress.objects.all()
+
+
+class CreateGithubProfile(graphene.Mutation):
+    github_profile = graphene.Field(ProfileType)
+
+    class Arguments:
+        username = graphene.String(required=True)
+        access_token = graphene.String(required=True)
+        emails = graphene.List(graphene.String, required=True)
+
+    def mutate(self, info, username, access_token, emails):
+        user = info.context.user
+        new_profile = GithubProfile.objects.create(
+            username=username, access_token=access_token, user=user
+        )
+
+        for email in emails:
+            EmailAddress.objects.create(email=email, profile=new_profile)
+
+        return CreateGithubProfile(github_profile=new_profile)
 
 
 class Mutation(graphene.ObjectType):
-    # TODO
-    pass
+    create_github_profile = CreateGithubProfile

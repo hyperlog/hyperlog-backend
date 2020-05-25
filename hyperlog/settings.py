@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "graphene_django",
     # local apps
     "apps.users",
+    "apps.profiles",
 ]
 
 MIDDLEWARE = [
