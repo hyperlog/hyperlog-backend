@@ -38,8 +38,7 @@ class Query(graphene.ObjectType):
             return BaseProfileModel.objects.filter(
                 _provider=kwargs.get("provider")
             )
-
-        return BaseProfileModel.all()
+        return BaseProfileModel.objects.all()
 
     def resolve_profile(self, info, **kwargs):
         return BaseProfileModel.get(id=kwargs.get("id"))
