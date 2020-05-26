@@ -8,25 +8,47 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='BaseProfileModel',
+            name="BaseProfileModel",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('_provider', models.CharField(max_length=20)),
-                ('username', models.CharField(max_length=255)),
-                ('access_token', models.CharField(max_length=255)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("_provider", models.CharField(max_length=20)),
+                ("username", models.CharField(max_length=255)),
+                ("access_token", models.CharField(max_length=255)),
             ],
         ),
         migrations.CreateModel(
-            name='EmailAddress',
+            name="EmailAddress",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('email', models.EmailField(max_length=254)),
-                ('profile', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='emails', to='profiles.BaseProfileModel')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("email", models.EmailField(max_length=254)),
+                (
+                    "profile",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="emails",
+                        to="profiles.BaseProfileModel",
+                    ),
+                ),
             ],
         ),
     ]

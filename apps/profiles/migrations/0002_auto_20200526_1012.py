@@ -10,51 +10,40 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('profiles', '0001_initial'),
+        ("profiles", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='baseprofilemodel',
-            name='user',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='profiles', to=settings.AUTH_USER_MODEL),
+            model_name="baseprofilemodel",
+            name="user",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="profiles",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.CreateModel(
-            name='BitbucketProfile',
-            fields=[
-            ],
-            options={
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('profiles.baseprofilemodel',),
+            name="BitbucketProfile",
+            fields=[],
+            options={"proxy": True, "indexes": [], "constraints": [],},
+            bases=("profiles.baseprofilemodel",),
         ),
         migrations.CreateModel(
-            name='GithubProfile',
-            fields=[
-            ],
-            options={
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('profiles.baseprofilemodel',),
+            name="GithubProfile",
+            fields=[],
+            options={"proxy": True, "indexes": [], "constraints": [],},
+            bases=("profiles.baseprofilemodel",),
         ),
         migrations.CreateModel(
-            name='GitlabProfile',
-            fields=[
-            ],
-            options={
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('profiles.baseprofilemodel',),
+            name="GitlabProfile",
+            fields=[],
+            options={"proxy": True, "indexes": [], "constraints": [],},
+            bases=("profiles.baseprofilemodel",),
         ),
         migrations.AlterUniqueTogether(
-            name='baseprofilemodel',
-            unique_together={('_provider', 'username')},
+            name="baseprofilemodel",
+            unique_together={("_provider", "username")},
         ),
     ]

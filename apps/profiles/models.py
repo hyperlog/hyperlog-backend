@@ -23,7 +23,7 @@ class BaseProfileModel(models.Model):
 
     class Meta:
         # There should be only one profile with a provider and username pair
-        unique_together = ['_provider', 'username']
+        unique_together = ["_provider", "username"]
 
     def __str__(self):
         return (
