@@ -49,7 +49,7 @@ class Query(graphene.ObjectType):
 
 
 class CreateGithubProfile(graphene.Mutation):
-    github_profile = graphene.Field(ProfileType)
+    profile = graphene.Field(ProfileType)
 
     class Arguments:
         username = graphene.String(required=True)
@@ -65,8 +65,8 @@ class CreateGithubProfile(graphene.Mutation):
         for email in emails:
             EmailAddress.objects.create(email=email, profile=new_profile)
 
-        return CreateGithubProfile(github_profile=new_profile)
+        return CreateGithubProfile(profile=new_profile)
 
 
 class Mutation(graphene.ObjectType):
-    create_github_profile = CreateGithubProfile
+    create_github_profile = CreateGithubProfile.Field()
