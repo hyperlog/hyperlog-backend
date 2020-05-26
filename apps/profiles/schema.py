@@ -13,10 +13,10 @@ class ProfileType(DjangoObjectType):
     emails = graphene.List(graphene.String)
 
     def resolve_provider(self, info):
-        return self._provide
+        return self._provider
 
     def resolve_emails(self, info):
-        return [each.email for each in self.emails]
+        return [each.email for each in self.emails.all()]
 
 
 class EmailAddressType(DjangoObjectType):

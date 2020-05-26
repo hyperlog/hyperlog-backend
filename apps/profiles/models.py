@@ -21,6 +21,10 @@ class BaseProfileModel(models.Model):
         "users.User", on_delete=models.CASCADE, related_name="profiles"
     )
 
+    class Meta:
+        # There should be only one profile with a provider and username pair
+        unique_together = ['_provider', 'username']
+
     def __str__(self):
         return (
             f"Profile <provider: {self._provider}, username: {self.username}>"
