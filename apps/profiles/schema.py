@@ -1,5 +1,6 @@
 import graphene
 from graphene_django import DjangoObjectType
+from graphql_jwt.decorators import staff_member_required
 
 from apps.profiles.models import BaseProfileModel, EmailAddress, GithubProfile
 
@@ -40,8 +41,9 @@ class Query(graphene.ObjectType):
             )
         return BaseProfileModel.objects.all()
 
+    @staff_member_required
     def resolve_profile(self, info, **kwargs):
-        return BaseProfileModel.get(id=kwargs.get("id"))
+        return BaseProfileModel.objects.get(id=kwargs.get("id"))
 
     def resolve_profile_emails(self, info, **kwargs):
         return EmailAddress.objects.all()

@@ -1,6 +1,7 @@
 import graphene
 import graphql_jwt
 from graphene_django import DjangoObjectType
+from graphql_jwt.decorators import login_required
 
 from django.contrib.auth import logout
 
@@ -35,6 +36,7 @@ class Query(graphene.ObjectType):
         return User.objects.all()
 
     @staticmethod
+    @login_required
     def resolve_this_user(cls, info, **kwargs):
         if info.context.user.is_authenticated:
             return info.context.user
