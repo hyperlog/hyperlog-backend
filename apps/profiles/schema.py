@@ -57,6 +57,7 @@ class CreateGithubProfile(graphene.Mutation):
         access_token = graphene.String(required=True)
         emails = graphene.List(graphene.String, required=True)
 
+    @login_required
     def mutate(self, info, username, access_token, emails):
         user = info.context.user
         new_profile = GithubProfile.objects.create(
