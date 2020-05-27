@@ -128,3 +128,14 @@ class BitbucketProfile(BaseProfileModel):
 
     class Meta:
         proxy = True
+
+
+class Notification(models.Model):
+    priority = models.CharField(max_length=50)
+    heading = models.CharField(max_length=100)
+    sub = models.TextField(nullable=True)
+    read = models.BooleanField(default=False)
+    # user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name="notifications")
+
+    def __str__(self):
+        return f"Notification <UserID: {self.user.id}, heading: {self.heading}"
