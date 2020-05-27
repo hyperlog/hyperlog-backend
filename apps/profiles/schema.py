@@ -1,6 +1,6 @@
 import graphene
 from graphene_django import DjangoObjectType
-from graphql_jwt.decorators import staff_member_required
+from graphql_jwt.decorators import staff_member_required, login_required
 
 from apps.profiles.models import BaseProfileModel, EmailAddress, GithubProfile
 
