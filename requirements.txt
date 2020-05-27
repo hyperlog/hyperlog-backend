@@ -4,3 +4,4 @@ graphene_django==2.10.1
 django_graphql_jwt==0.3.1
 django-cors-headers==3.3.0
 psycopg2==2.8.5
+redis==3.5.2

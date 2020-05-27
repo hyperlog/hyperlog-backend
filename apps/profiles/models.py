@@ -1,4 +1,11 @@
+import json
+import logging
+
 from django.db import models
+
+from apps.profiles.utils import RedisInterface
+
+logger = logging.getLogger(__name__)
 
 
 class EmailAddress(models.Model):
@@ -29,6 +36,33 @@ class BaseProfileModel(models.Model):
         return (
             f"Profile <provider: {self._provider}, username: {self.username}>"
         )
+
+    def _get_payload(self):
+        """Creates a JSON-encoded payload to send to Redis
+
+        Payload format:
+        {
+          "provider": "github",
+          "access_token": "the access token",
+          "user_id": 1
+        }
+        """
+        return json.dumps({
+            "provider": self._provider,
+            "access_token": self.access_token,
+            "user_id": self.user.id
+        })
+
+    def push_to_queue(self):
+        """Pushes the payload obtained from _get_redis_payload to Redis"""
+        r = RedisInterface()
+        payload = self._get_payload()
+
+        try:
+            r.push_to_profiles_queue(payload)
+        except Exception:
+            # Log the error so that payload can be pushed later
+            logger.error(f"Error while pushing payload '{payload}' to Redis queue", exc_info=True)
 
 
 def get_profile_manager_by_provider(provider: str) -> models.Manager:
@@ -63,7 +97,9 @@ def get_profile_manager_by_provider(provider: str) -> models.Manager:
                     "_provider field can only be specified in model definition"
                 )
             kwargs["_provider"] = provider
-            return super().create(**kwargs)
+            profile_obj = super().create(**kwargs)
+            profile_obj.push_to_queue()
+            return profile_obj
 
     return ProfileManager
 
