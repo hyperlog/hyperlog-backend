@@ -74,14 +74,6 @@ bcrypt = ["bcrypt"]
 
 [[package]]
 category = "main"
-description = "Django-environ allows you to utilize 12factor inspired environment variables to configure your Django application."
-name = "django-environ"
-optional = false
-python-versions = "*"
-version = "0.4.5"
-
-[[package]]
-category = "main"
 description = "JSON Web Token for Django GraphQL"
 name = "django-graphql-jwt"
 optional = false
