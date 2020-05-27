@@ -47,11 +47,13 @@ class BaseProfileModel(models.Model):
           "user_id": 1
         }
         """
-        return json.dumps({
-            "provider": self._provider,
-            "access_token": self.access_token,
-            "user_id": self.user.id
-        })
+        return json.dumps(
+            {
+                "provider": self._provider,
+                "access_token": self.access_token,
+                "user_id": self.user.id,
+            }
+        )
 
     def push_to_queue(self):
         """Pushes the payload obtained from _get_redis_payload to Redis"""
@@ -62,7 +64,10 @@ class BaseProfileModel(models.Model):
             r.push_to_profiles_queue(payload)
         except Exception:
             # Log the error so that payload can be pushed later
-            logger.error(f"Error while pushing payload '{payload}' to Redis queue", exc_info=True)
+            logger.error(
+                f"Error while pushing payload '{payload}' to Redis queue",
+                exc_info=True,
+            )
 
 
 def get_profile_manager_by_provider(provider: str) -> models.Manager:
