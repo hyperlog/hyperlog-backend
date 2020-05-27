@@ -9,7 +9,6 @@ python = "^3.6"
 Django = "2.2"
 graphene-django = "^2.10.1"
 django-graphql-jwt = "^0.3.1"
-Pillow = "^7.1.2"
 psycopg2 = "^2.8.5"
 
 [tool.poetry.dev-dependencies]
