@@ -116,19 +116,19 @@ class CreateNotification(graphene.Mutation):
     class Arguments:
         user_id = graphene.Int(required=True)
         priority = graphene.Int(required=True)
-        read = graphene.Boolean()
         heading = graphene.String(required=True)
         sub = graphene.String(required=True)
+        read = graphene.Boolean(default_value=False)
 
-    def mutate(self, info, priority, heading, sub, read, user_id):
+    def mutate(self, info, user_id, priority, heading, sub, read):
         try:
             user = get_model_object(get_user_model(), id=user_id)
             notification = Notification.objects.create(
                 user=user,
                 priority=priority,
-                read=read,
                 heading=heading,
                 sub=sub,
+                read=read
             )
             return CreateNotification(success=True, notification=notification)
 
@@ -158,4 +158,5 @@ class MarkNotificationAsRead(graphene.Mutation):
 
 class Mutation(graphene.ObjectType):
     create_github_profile = CreateGithubProfile.Field()
+    create_notification = CreateNotification.Field()
     mark_notification_as_read = MarkNotificationAsRead.Field()
