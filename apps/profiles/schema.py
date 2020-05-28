@@ -115,21 +115,15 @@ class CreateNotification(graphene.Mutation):
 
     class Arguments:
         user_id = graphene.Int(required=True)
-        priority = graphene.Int(required=True)
         heading = graphene.String(required=True)
         sub = graphene.String(required=True)
-        read = graphene.Boolean(default_value=False)
+        read = graphene.Boolean()
+        priority = graphene.Int()
 
-    def mutate(self, info, user_id, priority, heading, sub, read):
+    def mutate(self, info, user_id, **kwargs):
         try:
             user = get_model_object(get_user_model(), id=user_id)
-            notification = Notification.objects.create(
-                user=user,
-                priority=priority,
-                heading=heading,
-                sub=sub,
-                read=read
-            )
+            notification = Notification.objects.create(user=user, **kwargs)
             return CreateNotification(success=True, notification=notification)
 
         except Exception as e:
