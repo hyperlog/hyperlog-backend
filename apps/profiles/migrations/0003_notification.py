@@ -9,19 +9,39 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('profiles', '0002_auto_20200526_1012'),
+        ("profiles", "0002_auto_20200526_1012"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Notification',
+            name="Notification",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('priority', models.IntegerField(choices=[(0, 'Low'), (1, 'Medium'), (2, 'High')])),
-                ('read', models.BooleanField(default=False)),
-                ('heading', models.CharField(max_length=100)),
-                ('sub', models.TextField(blank=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='notifications', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "priority",
+                    models.IntegerField(
+                        choices=[(0, "Low"), (1, "Medium"), (2, "High")]
+                    ),
+                ),
+                ("read", models.BooleanField(default=False)),
+                ("heading", models.CharField(max_length=100)),
+                ("sub", models.TextField(blank=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="notifications",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]

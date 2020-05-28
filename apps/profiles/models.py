@@ -1,6 +1,7 @@
 import json
 import logging
 
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from apps.profiles.utils import RedisInterface
@@ -147,12 +148,13 @@ class Notification(models.Model):
     LOW = 0
     MEDIUM = 1
     HIGH = 2
-    priority_choices = ((LOW, "Low"), (MEDIUM, "Medium"), (HIGH, "High"))
 
     user = models.ForeignKey(
         "users.User", on_delete=models.CASCADE, related_name="notifications"
     )
-    priority = models.IntegerField(choices=priority_choices, default=MEDIUM)
+    priority = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(2)], default=MEDIUM
+    )
     read = models.BooleanField(default=False)
     heading = models.CharField(max_length=100)
     sub = models.TextField(blank=True)
