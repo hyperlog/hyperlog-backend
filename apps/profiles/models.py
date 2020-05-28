@@ -143,14 +143,11 @@ class Notification(models.Model):
     Can be accessed by Notification.LOW, Notification.MEDIUM, Notification.HIGH
     Default value is 2 - medium
     """
+
     LOW = 0
     MEDIUM = 1
     HIGH = 2
-    priority_choices = (
-        (LOW, "Low"),
-        (MEDIUM, "Medium"),
-        (HIGH, "High")
-    )
+    priority_choices = ((LOW, "Low"), (MEDIUM, "Medium"), (HIGH, "High"))
 
     user = models.ForeignKey(
         "users.User", on_delete=models.CASCADE, related_name="notifications"
