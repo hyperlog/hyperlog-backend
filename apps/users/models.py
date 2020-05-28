@@ -70,8 +70,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
 
     # Fields settings
-    EMAIL_FIELD = "username"
-    USERNAME_FIELD = "email"
+    EMAIL_FIELD = "email"
+    USERNAME_FIELD = "username"
+
+    REQUIRED_FIELDS = ["email"]
 
     objects = UserManager()
 
