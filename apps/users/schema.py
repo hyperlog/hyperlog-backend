@@ -19,6 +19,7 @@ class UserType(DjangoObjectType):
             "last_name",
             "registered_at",
             "profiles",
+            "notifications",
         ]
 
 
