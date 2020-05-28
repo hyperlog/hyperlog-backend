@@ -134,21 +134,28 @@ class Notification(models.Model):
     """
     Note:
     Priority Field:
-    Notification.priority is an IntegerField and can take values from 0 (low)
-    priority to X (highest priority)
+    Notification.priority is an IntegerField and can take values:
 
-    0 - {}
-    1 - {}
-    2 - {}
-    ...
+    0 - low
+    1 - medium
+    2 - high
 
-    Default value is X (label of X)
+    Can be accessed by Notification.LOW, Notification.MEDIUM, Notification.HIGH
+    Default value is 2 - medium
     """
+    LOW = 0
+    MEDIUM = 1
+    HIGH = 2
+    priority_choices = (
+        (LOW, "Low"),
+        (MEDIUM, "Medium"),
+        (HIGH, "High")
+    )
 
     user = models.ForeignKey(
         "users.User", on_delete=models.CASCADE, related_name="notifications"
     )
-    priority = models.IntegerField()
+    priority = models.IntegerField(choices=priority_choices)
     read = models.BooleanField(default=False)
     heading = models.CharField(max_length=100)
     sub = models.TextField(blank=True)

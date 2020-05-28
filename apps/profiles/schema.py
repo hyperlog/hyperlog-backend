@@ -114,11 +114,11 @@ class CreateNotification(graphene.Mutation):
     notification = graphene.Field(NotificationType)
 
     class Arguments:
-        priority = graphene.String(required=True)
+        user_id = graphene.Int(required=True)
+        priority = graphene.Int(required=True)
+        read = graphene.Boolean()
         heading = graphene.String(required=True)
         sub = graphene.String(required=True)
-        read = graphene.Boolean()
-        user_id = graphene.Int(required=True)
 
     def mutate(self, info, priority, heading, sub, read, user_id):
         try:
