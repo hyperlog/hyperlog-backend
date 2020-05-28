@@ -152,7 +152,7 @@ class Notification(models.Model):
     user = models.ForeignKey(
         "users.User", on_delete=models.CASCADE, related_name="notifications"
     )
-    priority = models.IntegerField(choices=priority_choices, default_value=MEDIUM)
+    priority = models.IntegerField(choices=priority_choices, default=MEDIUM)
     read = models.BooleanField(default=False)
     heading = models.CharField(max_length=100)
     sub = models.TextField(blank=True)
