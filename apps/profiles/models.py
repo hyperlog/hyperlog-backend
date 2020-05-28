@@ -131,11 +131,27 @@ class BitbucketProfile(BaseProfileModel):
 
 
 class Notification(models.Model):
-    priority = models.CharField(max_length=50)
-    heading = models.CharField(max_length=100)
-    sub = models.TextField(nullable=True)
+    """
+    Note:
+    Priority Field:
+    Notification.priority is an IntegerField and can take values from 0 (low)
+    priority to X (highest priority)
+
+    0 - {}
+    1 - {}
+    2 - {}
+    ...
+
+    Default value is X (label of X)
+    """
+
+    user = models.ForeignKey(
+        "users.User", on_delete=models.CASCADE, related_name="notifications"
+    )
+    priority = models.IntegerField()
     read = models.BooleanField(default=False)
-    # user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name="notifications")
+    heading = models.CharField(max_length=100)
+    sub = models.TextField(blank=True)
 
     def __str__(self):
         return f"Notification <UserID: {self.user.id}, heading: {self.heading}"

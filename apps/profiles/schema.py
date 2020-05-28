@@ -2,12 +2,15 @@ import graphene
 from graphene_django import DjangoObjectType
 from graphql_jwt.decorators import staff_member_required, login_required
 
+from django.contrib.auth import get_user_model
+
 from apps.profiles.models import (
     BaseProfileModel,
     EmailAddress,
     GithubProfile,
     Notification,
 )
+from apps.profiles.utils import get_model_object
 
 
 class ProfileType(DjangoObjectType):
@@ -106,6 +109,8 @@ class CreateGithubProfile(graphene.Mutation):
 
 
 class CreateNotification(graphene.Mutation):
+    success = graphene.String()
+    errors = graphene.List(graphene.String)
     notification = graphene.Field(NotificationType)
 
     class Arguments:
@@ -113,35 +118,44 @@ class CreateNotification(graphene.Mutation):
         heading = graphene.String(required=True)
         sub = graphene.String(required=True)
         read = graphene.Boolean()
-        # user_id = graphene.Int(required=True)
+        user_id = graphene.Int(required=True)
 
-    def mutate(self, info, priority, heading, sub, read):
-        notification = Notification.objects.create(
-            priority=priority, heading=heading, sub=sub, read=read
-        )
-        return CreateNotification(notification=notification)
+    def mutate(self, info, priority, heading, sub, read, user_id):
+        try:
+            user = get_model_object(get_user_model(), id=user_id)
+            notification = Notification.objects.create(
+                user=user,
+                priority=priority,
+                read=read,
+                heading=heading,
+                sub=sub,
+            )
+            return CreateNotification(success=True, notification=notification)
+
+        except Exception as e:
+            errors = [str(e)]
+            return CreateNotification(success=False, errors=errors)
 
 
-class UpdateNotification(graphene.Mutation):
-    notification = graphene.Field(NotificationType)
+class MarkNotificationAsRead(graphene.Mutation):
+    success = graphene.Boolean()
+    errors = graphene.List(graphene.String)
 
     class Arguments:
-        # Remove fields which should not be updated
         id = graphene.Int(required=True)
-        priority = graphene.String()
-        heading = graphene.String()
-        sub = graphene.String()
-        read = graphene.Boolean()
 
-    def mutate(self, info, id, **kwargs):
-        notification = Notification.objects.get(id=kwargs.get("id"))
-        for (key, val) in kwargs.items():
-            setattr(notification, key, val)
+    def mutate(self, info, id):
+        try:
+            notification = get_model_object(Notification, id=id)
+            notification.read = True
+            notification.save()
+        except Exception as e:
+            errors = [str(e)]
+            return MarkNotificationAsRead(success=False, errors=errors)
 
-        notification.save()
-        return notification
+        return MarkNotificationAsRead(success=True)
 
 
 class Mutation(graphene.ObjectType):
     create_github_profile = CreateGithubProfile.Field()
-    create_notification = CreateNotification.Field()
+    mark_notification_as_read = MarkNotificationAsRead.Field()
