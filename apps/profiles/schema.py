@@ -10,7 +10,7 @@ from apps.profiles.models import (
     GithubProfile,
     Notification,
 )
-from apps.profiles.utils import get_model_object
+from apps.profiles.utils import create_model_object, get_model_object
 
 
 class ProfileType(DjangoObjectType):
@@ -98,8 +98,12 @@ class CreateGithubProfile(graphene.Mutation):
     @login_required
     def mutate(self, info, username, access_token, emails):
         user = info.context.user
-        new_profile = GithubProfile.objects.create(
-            username=username, access_token=access_token, user=user
+
+        new_profile = create_model_object(
+            GithubProfile,
+            username=username,
+            access_token=access_token,
+            user=user,
         )
 
         for email in emails:
@@ -123,7 +127,9 @@ class CreateNotification(graphene.Mutation):
     def mutate(self, info, user_id, **kwargs):
         try:
             user = get_model_object(get_user_model(), id=user_id)
-            notification = Notification.objects.create(user=user, **kwargs)
+            notification = create_model_object(
+                Notification, user=user, **kwargs
+            )
             return CreateNotification(success=True, notification=notification)
 
         except Exception as e:
