@@ -6,6 +6,7 @@ from apps.profiles.models import (
     EmailAddress,
     GithubProfile,
     GitlabProfile,
+    Notification,
 )
 
 admin.site.register(BaseProfileModel)
@@ -13,3 +14,4 @@ admin.site.register(BitbucketProfile)
 admin.site.register(EmailAddress)
 admin.site.register(GithubProfile)
 admin.site.register(GitlabProfile)
+admin.site.register(Notification)

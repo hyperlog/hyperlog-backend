@@ -128,3 +128,34 @@ class BitbucketProfile(BaseProfileModel):
 
     class Meta:
         proxy = True
+
+
+class Notification(models.Model):
+    """
+    Note:
+    Priority Field:
+    Notification.priority is an IntegerField and can take values:
+
+    0 - low
+    1 - medium
+    2 - high
+
+    Can be accessed by Notification.LOW, Notification.MEDIUM, Notification.HIGH
+    Default value is 1 - Medium
+    """
+
+    LOW = 0
+    MEDIUM = 1
+    HIGH = 2
+    priority_choices = ((LOW, "Low"), (MEDIUM, "Medium"), (HIGH, "High"))
+
+    user = models.ForeignKey(
+        "users.User", on_delete=models.CASCADE, related_name="notifications"
+    )
+    priority = models.IntegerField(choices=priority_choices, default=MEDIUM)
+    read = models.BooleanField(default=False)
+    heading = models.CharField(max_length=100)
+    sub = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"Notification <UserID: {self.user.id}, heading: {self.heading}"
