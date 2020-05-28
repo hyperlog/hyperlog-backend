@@ -132,4 +132,4 @@ dmypy.json
 .vscode/
 
 # Django migrations (Remove from here when pushing to production)
-*/migrations/*
+migrations/
