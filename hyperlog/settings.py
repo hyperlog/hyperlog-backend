@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     # third-party apps
     "corsheaders",
     "graphene_django",
+    "social_django",
     # local apps
     "apps.users",
     "apps.profiles",
@@ -145,19 +146,36 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 
+
+# Redis
+
+REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+REDIS_PORT = os.environ.get("REDIS_PORT", 6379)
+REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", None)
+
+
+# Social auth
+
+SOCIAL_AUTH_POSTGRES_JSONFIELD = True
+SOCIAL_AUTH_USER_MODEL = "users.User"
+
+SOCIAL_AUTH_STRATEGY = "social_django.strategy.DjangoStrategy"
+SOCIAL_AUTH_STORAGE = "social_django.models.DjangoStorage"
+
+SOCIAL_AUTH_GITHUB_SCOPE = ["public_repo", "read:user", "user:email"]
+SOCIAL_AUTH_GITHUB_KEY = os.environ.get("SOCIAL_AUTH_GITHUB_KEY", "")
+SOCIAL_AUTH_GITHUB_SECRET = os.environ.get("SOCIAL_AUTH_GITHUB_SECRET", "")
+
+
 GRAPHENE = {
     "SCHEMA": "hyperlog.schema.schema",
     "MIDDLEWARE": ["graphql_jwt.middleware.JSONWebTokenMiddleware"],
 }
 
 AUTHENTICATION_BACKENDS = [
+    "social_core.backends.github.GithubOAuth2"
     "graphql_jwt.backends.JSONWebTokenBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
 
 AUTH_USER_MODEL = "users.User"
-
-
-REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
-REDIS_PORT = os.environ.get("REDIS_PORT", 6379)
-REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", None)
