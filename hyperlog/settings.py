@@ -155,8 +155,9 @@ REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", None)
 
 # GitHub OAuth
 
-GITHUB_CLIENT_ID = env('GITHUB_CLIENT_ID')
-GITHUB_CLIENT_SECRET = env('GITHUB_CLIENT_SECRET')
+GITHUB_CLIENT_ID = env("GITHUB_CLIENT_ID", default="")
+GITHUB_CLIENT_SECRET = env("GITHUB_CLIENT_SECRET", default="")
+GITHUB_OAUTH_SCOPES = ["public_repo", "read:user", "user:email"]
 
 
 GRAPHENE = {
