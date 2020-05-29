@@ -46,7 +46,6 @@ INSTALLED_APPS = [
     # third-party apps
     "corsheaders",
     "graphene_django",
-    "social_django",
     # local apps
     "apps.users",
     "apps.profiles",
@@ -154,17 +153,10 @@ REDIS_PORT = os.environ.get("REDIS_PORT", 6379)
 REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", None)
 
 
-# Social auth
+# GitHub OAuth
 
-SOCIAL_AUTH_POSTGRES_JSONFIELD = True
-SOCIAL_AUTH_USER_MODEL = "users.User"
-
-SOCIAL_AUTH_STRATEGY = "social_django.strategy.DjangoStrategy"
-SOCIAL_AUTH_STORAGE = "social_django.models.DjangoStorage"
-
-SOCIAL_AUTH_GITHUB_SCOPE = ["public_repo", "read:user", "user:email"]
-SOCIAL_AUTH_GITHUB_KEY = env("SOCIAL_AUTH_GITHUB_KEY", default="")
-SOCIAL_AUTH_GITHUB_SECRET = env("SOCIAL_AUTH_GITHUB_SECRET", default="")
+GITHUB_CLIENT_ID = env('GITHUB_CLIENT_ID')
+GITHUB_CLIENT_SECRET = env('GITHUB_CLIENT_SECRET')
 
 
 GRAPHENE = {
@@ -173,7 +165,6 @@ GRAPHENE = {
 }
 
 AUTHENTICATION_BACKENDS = [
-    "social_core.backends.github.GithubOAuth2",
     "graphql_jwt.backends.JSONWebTokenBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
