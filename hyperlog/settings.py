@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "graphene_django",
     # local apps
+    "apps.base",
     "apps.users",
     "apps.profiles",
 ]
@@ -58,6 +59,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.base.middleware.jwt_middleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -145,6 +147,22 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 
+
+# Redis
+
+REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+REDIS_PORT = os.environ.get("REDIS_PORT", 6379)
+REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", None)
+
+
+# GitHub OAuth
+
+GITHUB_CLIENT_ID = env("GITHUB_CLIENT_ID", default="")
+GITHUB_CLIENT_SECRET = env("GITHUB_CLIENT_SECRET", default="")
+GITHUB_OAUTH_SCOPES = ["public_repo", "read:user", "user:email"]
+GITHUB_REDIRECT_URI = env("GITHUB_REDIRECT_URI", default="")
+
+
 GRAPHENE = {
     "SCHEMA": "hyperlog.schema.schema",
     "MIDDLEWARE": ["graphql_jwt.middleware.JSONWebTokenMiddleware"],
@@ -156,8 +174,3 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 AUTH_USER_MODEL = "users.User"
-
-
-REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
-REDIS_PORT = os.environ.get("REDIS_PORT", 6379)
-REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", None)

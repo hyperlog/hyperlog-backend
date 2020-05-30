@@ -10,7 +10,7 @@ from apps.profiles.models import (
     GithubProfile,
     Notification,
 )
-from apps.profiles.utils import create_model_object, get_model_object
+from apps.base.utils import create_model_object, get_model_object
 
 
 class ProfileType(DjangoObjectType):
