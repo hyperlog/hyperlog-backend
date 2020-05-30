@@ -9,7 +9,6 @@ from django.contrib.auth import get_user_model
 from apps.profiles.models import (
     BaseProfileModel,
     EmailAddress,
-    GithubProfile,
     Notification,
 )
 from apps.base.utils import create_model_object, get_model_object
@@ -91,31 +90,6 @@ class Query(graphene.ObjectType):
         return EmailAddress.objects.all()
 
 
-class CreateGithubProfile(graphene.Mutation):
-    profile = graphene.Field(ProfileType)
-
-    class Arguments:
-        username = graphene.String(required=True)
-        access_token = graphene.String(required=True)
-        emails = graphene.List(graphene.String, required=True)
-
-    @login_required
-    def mutate(self, info, username, access_token, emails):
-        user = info.context.user
-
-        new_profile = create_model_object(
-            GithubProfile,
-            username=username,
-            access_token=access_token,
-            user=user,
-        )
-
-        for email in emails:
-            EmailAddress.objects.create(email=email, profile=new_profile)
-
-        return CreateGithubProfile(profile=new_profile)
-
-
 class DeleteGithubProfile(graphene.Mutation):
     success = graphene.Boolean()
     errors = graphene.List(graphene.String)
@@ -183,6 +157,6 @@ class MarkNotificationAsRead(graphene.Mutation):
 
 
 class Mutation(graphene.ObjectType):
-    create_github_profile = CreateGithubProfile.Field()
+    delete_github_profile = DeleteGithubProfile.Field()
     create_notification = CreateNotification.Field()
     mark_notification_as_read = MarkNotificationAsRead.Field()
