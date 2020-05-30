@@ -1,3 +1,5 @@
+import logging
+
 import graphene
 from graphene_django import DjangoObjectType
 from graphql_jwt.decorators import staff_member_required, login_required
@@ -11,6 +13,8 @@ from apps.profiles.models import (
     Notification,
 )
 from apps.base.utils import create_model_object, get_model_object
+
+logger = logging.getLogger(__name__)
 
 
 class ProfileType(DjangoObjectType):
@@ -110,6 +114,28 @@ class CreateGithubProfile(graphene.Mutation):
             EmailAddress.objects.create(email=email, profile=new_profile)
 
         return CreateGithubProfile(profile=new_profile)
+
+
+class DeleteGithubProfile(graphene.Mutation):
+    success = graphene.Boolean()
+    errors = graphene.List(graphene.String)
+
+    @login_required
+    def mutate(self, info, **kwargs):
+        user = info.context.user
+
+        try:
+            profile = user.profiles.get(_provider="github")
+        except BaseProfileModel.DoesNotExist:
+            errors = ["GitHub account is not associated."]
+            return DeleteGithubProfile(success=False, errors=errors)
+
+        try:
+            profile.delete()
+            return DeleteGithubProfile(success=True)
+        except Exception:
+            logger.error("Error in DeleteGithubProfile mutation")
+            return DeleteGithubProfile(success=False, errors=["server error"])
 
 
 class CreateNotification(graphene.Mutation):
