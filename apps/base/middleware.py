@@ -17,7 +17,7 @@ def jwt_middleware(get_response):
                 user = authenticate(request=request)
             except JSONWebTokenError as err:
                 return JsonResponse(
-                    {"errors": [{"message": str(err)}],}, status=401
+                    {"errors": [{"message": str(err)}]}, status=401
                 )
 
             if user is not None:

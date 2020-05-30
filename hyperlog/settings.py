@@ -160,6 +160,7 @@ REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", None)
 GITHUB_CLIENT_ID = env("GITHUB_CLIENT_ID", default="")
 GITHUB_CLIENT_SECRET = env("GITHUB_CLIENT_SECRET", default="")
 GITHUB_OAUTH_SCOPES = ["public_repo", "read:user", "user:email"]
+GITHUB_REDIRECT_URI = env("GITHUB_REDIRECT_URI", default="")
 
 
 GRAPHENE = {

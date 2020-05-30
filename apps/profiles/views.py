@@ -1,3 +1,4 @@
+import logging
 import sys
 
 from github import Github
@@ -6,15 +7,17 @@ from requests_oauthlib import OAuth2Session
 from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import redirect
-from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
 from apps.base.utils import create_model_object
-from apps.profiles.models import GithubProfile
+from apps.profiles.models import GithubProfile, EmailAddress
+
+logger = logging.getLogger(__name__)
 
 try:
     GITHUB_CLIENT_ID = settings.GITHUB_CLIENT_ID
     GITHUB_CLIENT_SECRET = settings.GITHUB_CLIENT_SECRET
+    GITHUB_REDIRECT_URI = settings.GITHUB_REDIRECT_URI
     GITHUB_OAUTH_SCOPES = settings.GITHUB_OAUTH_SCOPES
 except AttributeError:
     tb = sys.exc_info()[2]
@@ -30,10 +33,9 @@ GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 @require_http_methods(["GET"])
 def oauth_github(request):
     if request.user.is_authenticated:
-        redirect_uri = reverse("profiles:oauth_github_callback")
         github = OAuth2Session(
             client_id=GITHUB_CLIENT_ID,
-            redirect_uri=redirect_uri,
+            redirect_uri=GITHUB_REDIRECT_URI,
             scope=GITHUB_OAUTH_SCOPES,
         )
         authorization_url, state = github.authorization_url(
@@ -42,34 +44,62 @@ def oauth_github(request):
         request.session["oauth_github_state"] = state
         return redirect(authorization_url)
     else:
-        return redirect("/")
-        # return JsonResponse({"Authorization": request.headers.get("Authorization"), "HTTP_AUTHORIZATION": request.headers.get("HTTP_AUTHORIZATION")})
+        return JsonResponse(
+            {"success": False, "errors": ["User not authenticated"]}
+        )
 
 
 @require_http_methods(["GET"])
 def oauth_github_callback(request):
-    if request.user.is_authenticated and request.GET.get("code"):
+    if request.user.is_anonymous:
+        return JsonResponse(
+            {"success": False, "errors": ["User not authenticated"]}
+        )
+
+    if not request.GET.get("code"):
+        if request.GET.get("error"):
+            # See: https://developer.github.com/apps/managing-oauth-apps/troubleshooting-oauth-app-access-token-request-errors/  # noqa
+            error = {
+                "error": request.GET.get("error"),
+                "error_description": request.GET.get("error_description"),
+                "error_uri": request.GET.get("error_uri"),
+            }
+            logger.error(f"Github OAuth error\n{error}")
+            return JsonResponse({"success": False, "errors": [error]})
+        return JsonResponse(
+            {"success": False, "errors": ["No code found in parameters"]}
+        )
+
+    try:
         code = request.GET.get("code")
-        github = OAuth2Session(
+        oauth = OAuth2Session(
             client_id=GITHUB_CLIENT_ID,
             state=request.session.get("oauth_github_state"),
         )
-        access_token = github.fetch_token(
+        access_token = oauth.fetch_token(
             GITHUB_TOKEN_URL, client_secret=GITHUB_CLIENT_SECRET, code=code
-        )
+        ).get("access_token")
 
         # Load interface to v3 API to grab uid, username and email
-        g = Github(access_token.get('access_token'))
-        g_user = g.get_user()
+        g = Github(access_token)
+        github_details = g.get_user()
+
         # TODO: Add UID to model creation kwargs
-        create_model_object(
+        profile = create_model_object(
             GithubProfile,
             access_token=access_token,
-            username=g_user.login,
-            emails=[each['email'] for each in g_user.get_emails()],
+            username=github_details.login,
             user=request.user,
         )
-        return redirect("/")
-        # redirect to a page and indicate successful authentication
-    else:
-        return redirect("/")
+
+        for email_dict in github_details.get_emails():
+            # TODO: Add primary and verified parameters
+            create_model_object(
+                EmailAddress, email=email_dict.get("email"), profile=profile
+            )
+
+    except Exception:
+        logger.error("Error while processing Github OAuth", exc_info=True)
+        return JsonResponse({"success": False})
+
+    return JsonResponse({"success": True})
