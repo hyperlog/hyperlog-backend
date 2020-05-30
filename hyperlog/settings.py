@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "graphene_django",
     # local apps
+    "apps.base",
     "apps.users",
     "apps.profiles",
 ]
@@ -58,6 +59,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.base.middleware.jwt_middleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

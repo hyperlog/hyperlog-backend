@@ -4,12 +4,13 @@ from github import Github
 from requests_oauthlib import OAuth2Session
 
 from django.conf import settings
+from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
+from apps.base.utils import create_model_object
 from apps.profiles.models import GithubProfile
-from apps.profiles.utils import create_model_object
 
 try:
     GITHUB_CLIENT_ID = settings.GITHUB_CLIENT_ID
@@ -39,9 +40,10 @@ def oauth_github(request):
             GITHUB_AUTHORIZATION_URL
         )
         request.session["oauth_github_state"] = state
-        redirect(authorization_url)
+        return redirect(authorization_url)
     else:
-        pass  # redirect to somewhere
+        return redirect("/")
+        # return JsonResponse({"Authorization": request.headers.get("Authorization"), "HTTP_AUTHORIZATION": request.headers.get("HTTP_AUTHORIZATION")})
 
 
 @require_http_methods(["GET"])
@@ -57,16 +59,17 @@ def oauth_github_callback(request):
         )
 
         # Load interface to v3 API to grab uid, username and email
-        g = Github(access_token)
+        g = Github(access_token.get('access_token'))
         g_user = g.get_user()
         # TODO: Add UID to model creation kwargs
         create_model_object(
             GithubProfile,
             access_token=access_token,
             username=g_user.login,
-            emails=g_user.get_emails(),
+            emails=[each['email'] for each in g_user.get_emails()],
             user=request.user,
         )
+        return redirect("/")
         # redirect to a page and indicate successful authentication
     else:
-        pass  # redirect somewhere like home page
+        return redirect("/")
