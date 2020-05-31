@@ -9,6 +9,7 @@ from django.contrib.auth import get_user_model, logout
 from django.db.utils import Error as DjangoDBError
 
 from apps.users.models import User
+from apps.users.utils import delete_user as delete_user_util
 
 logger = logging.getLogger(__name__)
 
@@ -144,10 +145,10 @@ class DeleteUser(graphene.Mutation):
         user = info.context.user
 
         try:
-            user.delete()
+            delete_user_util(user)
             return DeleteUser(success=True)
         except Exception:
-            logger.error("Error in DeleteUser mutation")
+            logger.error("Error in DeleteUser mutation", exc_info=True)
             return DeleteUser(success=False, errors=["server error"])
 
 

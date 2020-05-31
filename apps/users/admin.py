@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from apps.users.models import User
+from apps.users.models import User, DeletedUser
 from apps.users.forms import UserChangeForm, UserCreationForm
 
 
@@ -58,3 +58,5 @@ class UserAdmin(BaseUserAdmin):
 admin.site.register(User, UserAdmin)
 # Unregister the Group model from admin.
 admin.site.unregister(Group)
+
+admin.site.register(DeletedUser)

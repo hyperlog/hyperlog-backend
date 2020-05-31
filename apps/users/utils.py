@@ -1,5 +1,7 @@
 from itertools import chain
 
+from django.utils import timezone
+
 from apps.users.models import DeletedUser, User
 
 
@@ -29,8 +31,12 @@ def delete_user(user: User) -> DeletedUser:
     user_dict = to_dict(user)
     user_dict["old_user_id"] = user_dict.pop("id")
 
-    # Create new deleted user and delete previous user
-    deleted_user = DeletedUser(**user_dict)
+    kwargs = {}
+    for field in DeletedUser._meta.get_fields()[1:]:  # Exclude
+        if field.name in user_dict:
+            kwargs[field.name] = user_dict.pop(field.name)
+
+    deleted_user = DeletedUser(**kwargs)
     deleted_user.save()
     user.delete()
 

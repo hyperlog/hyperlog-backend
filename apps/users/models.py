@@ -106,8 +106,8 @@ class User(AbstractBaseUser, PermissionsMixin):
 class DeletedUser(models.Model):
     username = models.CharField(verbose_name="Username", max_length=30)
     email = models.EmailField(verbose_name="Email", max_length=255)
-    first_name = models.CharField(verbose_name="First name", max_length=30,)
-    last_name = models.CharField(verbose_name="Last name", max_length=30,)
+    first_name = models.CharField(verbose_name="First name", max_length=30)
+    last_name = models.CharField(verbose_name="Last name", max_length=30)
 
     is_admin = models.BooleanField(verbose_name="Admin", default=False)
     is_active = models.BooleanField(verbose_name="Active", default=True)
@@ -116,9 +116,7 @@ class DeletedUser(models.Model):
 
     # Fields specific to DeletedUser
     old_user_id = models.IntegerField(verbose_name="Old User ID")
-    deleted_at = models.DateTimeField(
-        verbose_name="Deleted at", auto_now_add=timezone.now
-    )
+    deleted_at = models.DateTimeField(verbose_name="Deleted at", auto_now_add=timezone.now)
 
     class Meta:
         verbose_name = "Deleted User"
