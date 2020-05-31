@@ -5,7 +5,7 @@ from github import Github
 from requests_oauthlib import OAuth2Session
 
 from django.conf import settings
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import redirect
 from django.views.decorators.http import require_http_methods
 
@@ -29,6 +29,13 @@ except AttributeError:
 GITHUB_AUTHORIZATION_URL = "https://github.com/login/oauth/authorize"
 GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 
+
+@require_http_methods(["GET"])
+def connect_github(request):
+    token = request.GET.get("token") or ""
+    response = HttpResponseRedirect('/auth/github')
+    response['Authorization'] = f"JWT {token}"
+    return response
 
 @require_http_methods(["GET"])
 def oauth_github(request):

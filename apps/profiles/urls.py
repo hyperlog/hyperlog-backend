@@ -4,6 +4,7 @@ from apps.profiles import views
 
 
 urlpatterns = [
+    path("connect_github", views.connect_github),
     path("auth/github", views.oauth_github, name="oauth_github"),
     path(
         "auth/github/callback",
