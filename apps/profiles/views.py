@@ -33,7 +33,7 @@ GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 @require_http_methods(["GET"])
 def connect_github(request):
     token = request.GET.get("token") or ""
-    response = HttpResponseRedirect('/api/auth/github')
+    response = HttpResponseRedirect('/auth/github')
     response['Authorization'] = f"JWT {token}"
     return response
 
