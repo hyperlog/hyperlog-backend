@@ -32,7 +32,7 @@ def delete_user(user: User) -> DeletedUser:
     user_dict["old_user_id"] = user_dict.pop("id")
 
     kwargs = {}
-    for field in DeletedUser._meta.get_fields()[1:]:  # Exclude
+    for field in DeletedUser._meta.get_fields():
         if field.name in user_dict:
             kwargs[field.name] = user_dict.pop(field.name)
 
