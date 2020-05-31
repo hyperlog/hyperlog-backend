@@ -97,7 +97,6 @@ class UpdateUser(graphene.Mutation):
     errors = graphene.List(graphene.String)
 
     class Arguments:
-        username = graphene.String()
         password = graphene.String()
         email = graphene.String()
         first_name = graphene.String()
@@ -107,23 +106,14 @@ class UpdateUser(graphene.Mutation):
     def mutate(self, info, **kwargs):
         user = info.context.user
 
-        for unique_field in ["username", "email"]:
-            # Check if arg is given and if it is different from existing
-            if kwargs.get(unique_field) and getattr(
-                user, unique_field
-            ) != kwargs.get(unique_field):
-                val = kwargs[unique_field]
+        if kwargs.get("email") and user.email != kwargs.get("email"):
+            email = kwargs["email"]
+            # Check for unique constraint
+            if get_user_model().objects.filter(email=email).exists():
+                errors = [f"User with email {email} already exists"]
+                return UpdateUser(success=False, errors=errors)
 
-                # Check for unique constraint
-                if (
-                    get_user_model()
-                    .objects.filter(**{unique_field: val})
-                    .exists()
-                ):
-                    errors = [f"User with {unique_field} {val} already exists"]
-                    return UpdateUser(success=False, errors=errors)
-
-                setattr(user, unique_field, val)
+            user.email = email
 
         for field in ["first_name", "last_name"]:
             if kwargs.get(field):
