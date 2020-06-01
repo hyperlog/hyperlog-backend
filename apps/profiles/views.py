@@ -8,6 +8,7 @@ from django.conf import settings
 from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import redirect
 from django.views.decorators.http import require_http_methods
+from graphql_jwt.decorators import jwt_cookie
 
 from apps.base.utils import create_model_object
 from apps.profiles.models import GithubProfile, EmailAddress
@@ -34,11 +35,12 @@ GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 def connect_github(request):
     token = request.GET.get("token") or ""
     response = HttpResponseRedirect("/auth/github")
-    response["Authorization"] = f"JWT {token}"
+    response.set_cookie("JWT", token, max_age=30)
     return response
 
 
 @require_http_methods(["GET"])
+@jwt_cookie
 def oauth_github(request):
     if request.user.is_authenticated:
         github = OAuth2Session(
