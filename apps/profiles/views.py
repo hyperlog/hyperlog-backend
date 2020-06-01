@@ -33,9 +33,10 @@ GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 @require_http_methods(["GET"])
 def connect_github(request):
     token = request.GET.get("token") or ""
-    response = HttpResponseRedirect('/auth/github')
-    response['Authorization'] = f"JWT {token}"
+    response = HttpResponseRedirect("/auth/github")
+    response["Authorization"] = f"JWT {token}"
     return response
+
 
 @require_http_methods(["GET"])
 def oauth_github(request):
@@ -92,8 +93,7 @@ def oauth_github_callback(request):
         github_details = g.get_user()
 
         # TODO: Add UID to model creation kwargs
-        profile = create_model_object(
-            GithubProfile,
+        profile = GithubProfile.objects.create(
             access_token=access_token,
             username=github_details.login,
             user=request.user,

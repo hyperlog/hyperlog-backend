@@ -1,3 +1,5 @@
+import logging
+
 import graphene
 from graphene_django import DjangoObjectType
 from graphql_jwt.decorators import staff_member_required, login_required
@@ -7,10 +9,11 @@ from django.contrib.auth import get_user_model
 from apps.profiles.models import (
     BaseProfileModel,
     EmailAddress,
-    GithubProfile,
     Notification,
 )
 from apps.base.utils import create_model_object, get_model_object
+
+logger = logging.getLogger(__name__)
 
 
 class ProfileType(DjangoObjectType):
@@ -87,29 +90,26 @@ class Query(graphene.ObjectType):
         return EmailAddress.objects.all()
 
 
-class CreateGithubProfile(graphene.Mutation):
-    profile = graphene.Field(ProfileType)
-
-    class Arguments:
-        username = graphene.String(required=True)
-        access_token = graphene.String(required=True)
-        emails = graphene.List(graphene.String, required=True)
+class DeleteGithubProfile(graphene.Mutation):
+    success = graphene.Boolean()
+    errors = graphene.List(graphene.String)
 
     @login_required
-    def mutate(self, info, username, access_token, emails):
+    def mutate(self, info, **kwargs):
         user = info.context.user
 
-        new_profile = create_model_object(
-            GithubProfile,
-            username=username,
-            access_token=access_token,
-            user=user,
-        )
+        try:
+            profile = user.profiles.get(_provider="github")
+        except BaseProfileModel.DoesNotExist:
+            errors = ["GitHub account is not associated."]
+            return DeleteGithubProfile(success=False, errors=errors)
 
-        for email in emails:
-            EmailAddress.objects.create(email=email, profile=new_profile)
-
-        return CreateGithubProfile(profile=new_profile)
+        try:
+            profile.delete()
+            return DeleteGithubProfile(success=True)
+        except Exception:
+            logger.error("Error in DeleteGithubProfile mutation")
+            return DeleteGithubProfile(success=False, errors=["server error"])
 
 
 class CreateNotification(graphene.Mutation):
@@ -157,6 +157,6 @@ class MarkNotificationAsRead(graphene.Mutation):
 
 
 class Mutation(graphene.ObjectType):
-    create_github_profile = CreateGithubProfile.Field()
+    delete_github_profile = DeleteGithubProfile.Field()
     create_notification = CreateNotification.Field()
     mark_notification_as_read = MarkNotificationAsRead.Field()
