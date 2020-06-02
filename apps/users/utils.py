@@ -1,7 +1,5 @@
 from itertools import chain
 
-from django.utils import timezone
-
 from apps.users.models import DeletedUser, User
 
 

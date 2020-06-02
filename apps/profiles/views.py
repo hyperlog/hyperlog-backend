@@ -26,7 +26,8 @@ try:
 except AttributeError:
     tb = sys.exc_info()[2]
     raise Exception(
-        "One of GitHub's OAuth settings was missing. " "Check traceback for more info."
+        "One of GitHub's OAuth settings was missing. "
+        "Check traceback for more info."
     ).with_traceback(tb)
 
 GITHUB_AUTHORIZATION_URL = "https://github.com/login/oauth/authorize"
@@ -40,9 +41,9 @@ def connect_github(request):
         # Validate token and return appropriate error message
         try:
             jwt_get_payload(token)
-        except JSONWebTokenExpired as err:
+        except JSONWebTokenExpired:
             return JsonResponse({"error": "Expired token"})
-        except JSONWebTokenError as err:
+        except JSONWebTokenError:
             return JsonResponse({"error": "Invalid token"})
     else:
         # If token parameter was not present
@@ -62,17 +63,23 @@ def oauth_github(request):
             redirect_uri=GITHUB_REDIRECT_URI,
             scope=GITHUB_OAUTH_SCOPES,
         )
-        authorization_url, state = github.authorization_url(GITHUB_AUTHORIZATION_URL)
+        authorization_url, state = github.authorization_url(
+            GITHUB_AUTHORIZATION_URL
+        )
         request.session["oauth_github_state"] = state
         return redirect(authorization_url)
     else:
-        return JsonResponse({"success": False, "errors": ["User not authenticated"]})
+        return JsonResponse(
+            {"success": False, "errors": ["User not authenticated"]}
+        )
 
 
 @require_http_methods(["GET"])
 def oauth_github_callback(request):
     if request.user.is_anonymous:
-        return JsonResponse({"success": False, "errors": ["User not authenticated"]})
+        return JsonResponse(
+            {"success": False, "errors": ["User not authenticated"]}
+        )
 
     if not request.GET.get("code"):
         if request.GET.get("error"):
@@ -91,7 +98,8 @@ def oauth_github_callback(request):
     try:
         code = request.GET.get("code")
         oauth = OAuth2Session(
-            client_id=GITHUB_CLIENT_ID, state=request.session.get("oauth_github_state"),
+            client_id=GITHUB_CLIENT_ID,
+            state=request.session.get("oauth_github_state"),
         )
         access_token = oauth.fetch_token(
             GITHUB_TOKEN_URL, client_secret=GITHUB_CLIENT_SECRET, code=code
@@ -103,7 +111,9 @@ def oauth_github_callback(request):
 
         # TODO: Add UID to model creation kwargs
         profile = GithubProfile.objects.create(
-            access_token=access_token, username=github_details.login, user=request.user,
+            access_token=access_token,
+            username=github_details.login,
+            user=request.user,
         )
 
         for email_dict in github_details.get_emails():

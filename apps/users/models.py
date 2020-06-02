@@ -116,7 +116,9 @@ class DeletedUser(models.Model):
 
     # Fields specific to DeletedUser
     old_user_id = models.IntegerField(verbose_name="Old User ID")
-    deleted_at = models.DateTimeField(verbose_name="Deleted at", auto_now_add=timezone.now)
+    deleted_at = models.DateTimeField(
+        verbose_name="Deleted at", auto_now_add=timezone.now
+    )
 
     class Meta:
         verbose_name = "Deleted User"
