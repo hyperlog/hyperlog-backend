@@ -9,6 +9,8 @@ from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import redirect
 from django.views.decorators.http import require_http_methods
 from graphql_jwt.decorators import jwt_cookie
+from graphql_jwt.exceptions import JSONWebTokenError
+from graphql_jwt.utils import get_payload as jwt_get_payload
 
 from apps.base.utils import create_model_object
 from apps.profiles.models import GithubProfile, EmailAddress
@@ -32,12 +34,20 @@ GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 
 @require_http_methods(["GET"])
 def connect_github(request):
-    token = request.GET.get("token")
-    if token:
-        response = HttpResponseRedirect("/auth/github")
-        response.set_cookie("JWT", token, max_age=30)
-        return response
-    return JsonResponse({"error": "Missing Token"})
+    if request.GET.get("token"):
+        token = request.GET.get("token")
+        # Validate token and return appropriate error message
+        try:
+            jwt_get_payload(token)
+        except JSONWebTokenError as err:
+            return JsonResponse({"error": str(err)})
+    else:
+        # If token parameter was not present
+        return JsonResponse({"error": "Missing token"})
+
+    response = HttpResponseRedirect(reverse("profiles:oauth_github"))
+    response.set_cookie("JWT", token, max_age=30)
+    return response
 
 
 @require_http_methods(["GET"])
