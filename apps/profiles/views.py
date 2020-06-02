@@ -7,9 +7,10 @@ from requests_oauthlib import OAuth2Session
 from django.conf import settings
 from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import redirect
+from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 from graphql_jwt.decorators import jwt_cookie
-from graphql_jwt.exceptions import JSONWebTokenError
+from graphql_jwt.exceptions import JSONWebTokenError, JSONWebTokenExpired
 from graphql_jwt.utils import get_payload as jwt_get_payload
 
 from apps.base.utils import create_model_object
@@ -39,8 +40,10 @@ def connect_github(request):
         # Validate token and return appropriate error message
         try:
             jwt_get_payload(token)
+        except JSONWebTokenExpired as err:
+            return JsonResponse({"error": "Expired token"})
         except JSONWebTokenError as err:
-            return JsonResponse({"error": str(err)})
+            return JsonResponse({"error": "Invalid token"})
     else:
         # If token parameter was not present
         return JsonResponse({"error": "Missing token"})
