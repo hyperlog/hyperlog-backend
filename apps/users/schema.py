@@ -150,6 +150,7 @@ class UpdatePassword(graphene.Mutation):
         if check_password(old, encoded):
             try:
                 user.set_password(new)
+                user.save()
                 return UpdatePassword(success=True)
             except Exception:
                 logger.error("Error in UpdatePassword mutation", exc_info=True)
