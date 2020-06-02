@@ -23,8 +23,7 @@ try:
 except AttributeError:
     tb = sys.exc_info()[2]
     raise Exception(
-        "One of GitHub's OAuth settings was missing. "
-        "Check traceback for more info."
+        "One of GitHub's OAuth settings was missing. " "Check traceback for more info."
     ).with_traceback(tb)
 
 GITHUB_AUTHORIZATION_URL = "https://github.com/login/oauth/authorize"
@@ -33,10 +32,12 @@ GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 
 @require_http_methods(["GET"])
 def connect_github(request):
-    token = request.GET.get("token") or ""
-    response = HttpResponseRedirect("/auth/github")
-    response.set_cookie("JWT", token, max_age=30)
-    return response
+    token = request.GET.get("token")
+    if token:
+        response = HttpResponseRedirect("/auth/github")
+        response.set_cookie("JWT", token, max_age=30)
+        return response
+    return JsonResponse({"error": "Missing Token"})
 
 
 @require_http_methods(["GET"])
@@ -48,23 +49,17 @@ def oauth_github(request):
             redirect_uri=GITHUB_REDIRECT_URI,
             scope=GITHUB_OAUTH_SCOPES,
         )
-        authorization_url, state = github.authorization_url(
-            GITHUB_AUTHORIZATION_URL
-        )
+        authorization_url, state = github.authorization_url(GITHUB_AUTHORIZATION_URL)
         request.session["oauth_github_state"] = state
         return redirect(authorization_url)
     else:
-        return JsonResponse(
-            {"success": False, "errors": ["User not authenticated"]}
-        )
+        return JsonResponse({"success": False, "errors": ["User not authenticated"]})
 
 
 @require_http_methods(["GET"])
 def oauth_github_callback(request):
     if request.user.is_anonymous:
-        return JsonResponse(
-            {"success": False, "errors": ["User not authenticated"]}
-        )
+        return JsonResponse({"success": False, "errors": ["User not authenticated"]})
 
     if not request.GET.get("code"):
         if request.GET.get("error"):
@@ -83,8 +78,7 @@ def oauth_github_callback(request):
     try:
         code = request.GET.get("code")
         oauth = OAuth2Session(
-            client_id=GITHUB_CLIENT_ID,
-            state=request.session.get("oauth_github_state"),
+            client_id=GITHUB_CLIENT_ID, state=request.session.get("oauth_github_state"),
         )
         access_token = oauth.fetch_token(
             GITHUB_TOKEN_URL, client_secret=GITHUB_CLIENT_SECRET, code=code
@@ -96,9 +90,7 @@ def oauth_github_callback(request):
 
         # TODO: Add UID to model creation kwargs
         profile = GithubProfile.objects.create(
-            access_token=access_token,
-            username=github_details.login,
-            user=request.user,
+            access_token=access_token, username=github_details.login, user=request.user,
         )
 
         for email_dict in github_details.get_emails():
