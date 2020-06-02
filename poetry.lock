@@ -104,6 +104,17 @@ bcrypt = ["bcrypt"]
 
 [[package]]
 category = "main"
+description = "django-cors-headers is a Django application for handling the server headers required for Cross-Origin Resource Sharing (CORS)."
+name = "django-cors-headers"
+optional = false
+python-versions = ">=3.5"
+version = "3.3.0"
+
+[package.dependencies]
+Django = ">=2.0"
+
+[[package]]
+category = "main"
 description = "Django-environ allows you to utilize 12factor inspired environment variables to configure your Django application."
 name = "django-environ"
 optional = false
@@ -477,7 +488,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools", "func-timeout"]
 
 [metadata]
-content-hash = "e068ac84e27b356c36d775d9769dc59dea956e7612ad4c9345be77958b563b17"
+content-hash = "4de01fe16fb18f9fbf474edcc17946984dac8ee0f663688da29c255ac329eebc"
 python-versions = "^3.6"
 
 [metadata.files]
@@ -516,6 +527,10 @@ deprecated = [
 django = [
     {file = "Django-2.2-py3-none-any.whl", hash = "sha256:a2814bffd1f007805b19194eb0b9a331933b82bd5da1c3ba3d7b7ba16e06dc4b"},
     {file = "Django-2.2.tar.gz", hash = "sha256:7c3543e4fb070d14e10926189a7fcf42ba919263b7473dceaefce34d54e8a119"},
+]
+django-cors-headers = [
+    {file = "django-cors-headers-3.3.0.tar.gz", hash = "sha256:73d654950b5f5e7e4f67c05183d2169d4f7518ceb87734eb0d68f9e43be59f1c"},
+    {file = "django_cors_headers-3.3.0-py3-none-any.whl", hash = "sha256:48d267c10d11d8e17805bf896071c0a3e8efb6f79f6634a90e6faac4c2f8a1a0"},
 ]
 django-environ = [
     {file = "django-environ-0.4.5.tar.gz", hash = "sha256:6c9d87660142608f63ec7d5ce5564c49b603ea8ff25da595fd6098f6dc82afde"},
