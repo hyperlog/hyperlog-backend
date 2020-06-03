@@ -99,7 +99,6 @@ class UpdateUser(graphene.Mutation):
     errors = graphene.List(graphene.String)
 
     class Arguments:
-        password = graphene.String()
         email = graphene.String()
         first_name = graphene.String()
         last_name = graphene.String()
@@ -120,9 +119,6 @@ class UpdateUser(graphene.Mutation):
         for field in ["first_name", "last_name"]:
             if kwargs.get(field):
                 setattr(user, field, kwargs.get(field))
-
-        if kwargs.get("password"):
-            user.set_password(kwargs.get("password"))
 
         try:
             user.save()
