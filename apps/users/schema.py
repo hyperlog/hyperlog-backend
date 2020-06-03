@@ -6,6 +6,7 @@ from graphene_django import DjangoObjectType
 from graphql_jwt.decorators import login_required
 
 from django.contrib.auth import get_user_model, logout
+from django.contrib.auth.hashers import check_password
 from django.db.utils import Error as DjangoDBError
 
 from apps.users.models import User
@@ -98,7 +99,6 @@ class UpdateUser(graphene.Mutation):
     errors = graphene.List(graphene.String)
 
     class Arguments:
-        password = graphene.String()
         email = graphene.String()
         first_name = graphene.String()
         last_name = graphene.String()
@@ -120,9 +120,6 @@ class UpdateUser(graphene.Mutation):
             if kwargs.get(field):
                 setattr(user, field, kwargs.get(field))
 
-        if kwargs.get("password"):
-            user.set_password(kwargs.get("password"))
-
         try:
             user.save()
             return UpdateUser(success=True)
@@ -132,6 +129,31 @@ class UpdateUser(graphene.Mutation):
             # Hide the error log from user here as it could be a bug
             logger.error("Error in UpdateUser mutation", exc_info=True)
             return UpdateUser(success=False, errors=["server error"])
+
+
+class UpdatePassword(graphene.Mutation):
+    success = graphene.Boolean()
+    errors = graphene.List(graphene.String)
+
+    class Arguments:
+        old = graphene.String(required=True)
+        new = graphene.String(required=True)
+
+    @login_required
+    def mutate(self, info, old, new):
+        user = info.context.user
+        encoded = user.password
+        if check_password(old, encoded):
+            try:
+                user.set_password(new)
+                user.save()
+                return UpdatePassword(success=True)
+            except Exception:
+                logger.error("Error in UpdatePassword mutation", exc_info=True)
+                return UpdatePassword(success=False, errors=["server error"])
+        else:
+            errors = ["Old password is incorrect"]
+            return UpdatePassword(success=False, errors=errors)
 
 
 class DeleteUser(graphene.Mutation):
@@ -160,3 +182,4 @@ class Mutation(object):
     logout = Logout.Field()
     update_user = UpdateUser.Field()
     delete_user = DeleteUser.Field()
+    update_password = UpdatePassword.Field()
