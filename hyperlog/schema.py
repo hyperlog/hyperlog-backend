@@ -18,4 +18,10 @@ class Mutation(
     pass
 
 
-schema = graphene.Schema(query=Query, mutation=Mutation)
+class Subscription(apps.profiles.schema.Subscription, graphene.ObjectType):
+    pass
+
+
+schema = graphene.Schema(
+    query=Query, mutation=Mutation, subscription=Subscription
+)
