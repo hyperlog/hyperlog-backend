@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import graphene
@@ -6,14 +7,16 @@ from graphql_jwt.decorators import staff_member_required, login_required
 
 from django.contrib.auth import get_user_model
 
+from apps.base.utils import create_model_object, get_model_object
 from apps.profiles.models import (
     BaseProfileModel,
     EmailAddress,
     Notification,
 )
-from apps.base.utils import create_model_object, get_model_object
+from apps.profiles.utils import RedisInterface
 
 logger = logging.getLogger(__name__)
+rds = RedisInterface()
 
 
 class ProfileType(DjangoObjectType):
@@ -88,6 +91,21 @@ class Query(graphene.ObjectType):
 
     def resolve_profile_emails(self, info, **kwargs):
         return EmailAddress.objects.all()
+
+
+class Subscription(graphene.ObjectType):
+    notification = graphene.Field(NotificationType)  # Per user
+
+    @login_required
+    async def subscribe_notification(self, info, **kwargs):
+        user_id = info.context.user.id
+
+        while True:
+            notification_id = rds.pop_notification_id(user_id)
+            if notification_id:
+                notification = Notification.objects.get(id=notification_id)
+                yield notification
+            await asyncio.sleep(5)
 
 
 class DeleteGithubProfile(graphene.Mutation):
