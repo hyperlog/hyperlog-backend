@@ -119,7 +119,7 @@ def publish_message_to_sns_topic(client, topic, message, subject=None):
     * message_id {str}: The `MessageId` as returned by AWS.
     """
     try:
-        response = client.publish(x
+        response = client.publish(
             TopicArn=get_sns_topic_arn_by_name(topic),
             Message=message,
             Subject=subject,
