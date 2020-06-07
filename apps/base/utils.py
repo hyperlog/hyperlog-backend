@@ -130,3 +130,44 @@ def publish_message_to_sns_topic(client, topic, message, subject=None):
         raise
 
     return response["MessageId"]
+
+
+# SQS
+
+
+def get_sqs_queue_by_name(queue_name):
+    """
+    Gets a SQS queue by the name queue_name.
+
+    Parameters:
+    * queue_name {str}: Name of the SQS queue
+
+    Returns:
+    * queue {boto3 SQS Queue}: The boto3 queue object with the name queue_name
+
+    Note: Raises a `botocore.exceptions.ClientError` if queue does not exist
+    """
+    sqs = boto3.resource("sqs")
+    return sqs.get_queue_by_name(QueueName=queue_name)
+
+
+def create_sqs_queue(queue_name, attributes=None, tags=None):
+    """
+    Create a SQS queue with the name `queue_name`
+
+    Parameters:
+    * queue_name {str}: The name of the queue
+    * attributes {Dict[str, Any]}: The Attributes mapping.
+    * tags {Dict[str, Any]}: Associated tags
+
+    See: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs.html  # noqa
+
+    Returns:
+    * queue {boto3 SQS Queue}: The new boto3 queue with the given name
+
+    Note: Raises a `botocore.exceptions.ClientError` if queue already exists
+    """
+    sqs = boto3.resource("sqs")
+    return sqs.create_queue(
+        QueueName=queue_name, Attributes=attributes, Tags=tags
+    )
