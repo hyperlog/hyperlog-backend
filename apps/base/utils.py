@@ -52,7 +52,8 @@ def get_aws_client(resource, **kwargs):
     """Returns a Boto3 client for the given resource.
 
     Parameters:
-    * resource {str}: The AWS resource to fetch the client for (e.g. SQS, SNS)
+    * resource {str}: The AWS resource to fetch the client for
+    (e.g. "sqs", "sns")
     * kwargs {Dict[str, Any]}: Other parameters while connecting the client
     which will overwrite the default configuration (from env variables).
 
@@ -63,7 +64,7 @@ def get_aws_client(resource, **kwargs):
     # Credentials and config details will automatically be taken from
     # environment variables
     try:
-        client = boto3.client("sns")
+        client = boto3.client(resource)
         return client
     except Exception as e:
         logger.error(e, exc_info=True)
