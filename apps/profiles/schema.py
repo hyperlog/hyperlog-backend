@@ -11,7 +11,11 @@ from apps.profiles.models import (
     EmailAddress,
     Notification,
 )
-from apps.base.utils import create_model_object, get_model_object
+from apps.base.utils import (
+    create_model_object,
+    get_error_message,
+    get_model_object,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +137,7 @@ class CreateNotification(graphene.Mutation):
             return CreateNotification(success=True, notification=notification)
 
         except Exception as e:
-            errors = [str(e)]
+            errors = [get_error_message(e)]
             return CreateNotification(success=False, errors=errors)
 
 
@@ -150,7 +154,7 @@ class MarkNotificationAsRead(graphene.Mutation):
             notification.read = True
             notification.save()
         except Exception as e:
-            errors = [str(e)]
+            errors = [get_error_message(e)]
             return MarkNotificationAsRead(success=False, errors=errors)
 
         return MarkNotificationAsRead(success=True)

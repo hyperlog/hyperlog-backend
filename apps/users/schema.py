@@ -7,8 +7,11 @@ from graphql_jwt.decorators import login_required
 
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.hashers import check_password
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.db.utils import Error as DjangoDBError
 
+from apps.base.utils import get_error_message
 from apps.users.models import User
 from apps.users.utils import delete_user as delete_user_util
 
@@ -114,7 +117,12 @@ class UpdateUser(graphene.Mutation):
                 errors = [f"User with email {email} already exists"]
                 return UpdateUser(success=False, errors=errors)
 
-            user.email = email
+            try:
+                validate_email(email)
+                user.email = email
+            except ValidationError as e:
+                errors = [get_error_message(e)]
+                return UpdateUser(success=False, errors=errors)
 
         for field in ["first_name", "last_name"]:
             if kwargs.get(field):
@@ -123,8 +131,9 @@ class UpdateUser(graphene.Mutation):
         try:
             user.save()
             return UpdateUser(success=True)
-        except DjangoDBError as err:
-            return UpdateUser(success=False, errors=[str(err)])
+        except DjangoDBError as e:
+            errors = [get_error_message(e)]
+            return UpdateUser(success=False, errors=errors)
         except Exception:
             # Hide the error log from user here as it could be a bug
             logger.error("Error in UpdateUser mutation", exc_info=True)
