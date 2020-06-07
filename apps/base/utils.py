@@ -9,7 +9,10 @@ logger = logging.getLogger(__name__)
 
 AWS_ACCOUNT_ID = settings.AWS_ACCOUNT_ID
 AWS_DEFAULT_REGION = settings.AWS_DEFAULT_REGION
-AWS_SNS_TOPIC_ARN_TEMPLATE = "arn:aws:sns:%s:%s:{topic}" % (AWS_DEFAULT_REGION, AWS_ACCOUNT_ID)
+AWS_SNS_TOPIC_ARN_TEMPLATE = "arn:aws:sns:%s:%s:{topic}" % (
+    AWS_DEFAULT_REGION,
+    AWS_ACCOUNT_ID,
+)
 
 
 def create_model_object(model, **kwargs):
@@ -44,13 +47,14 @@ def get_model_object(model, **kwargs):
 
 # General AWS utils
 
+
 def get_aws_client(resource, **kwargs):
     """Returns a Boto3 client for the given resource.
 
     Parameters:
     * resource {str}: The AWS resource to fetch the client for (e.g. SQS, SNS)
-    * kwargs {Dict[str, Any]}: Other parameters while connecting the client which
-    will overwrite the default configuration (from env variables).
+    * kwargs {Dict[str, Any]}: Other parameters while connecting the client
+    which will overwrite the default configuration (from env variables).
 
     Returns:
     client {Boto3 low-level client}: A boto3 low-level client to access the
@@ -59,7 +63,7 @@ def get_aws_client(resource, **kwargs):
     # Credentials and config details will automatically be taken from
     # environment variables
     try:
-        client = boto3.client('sns')
+        client = boto3.client("sns")
         return client
     except Exception as e:
         logger.error(e, exc_info=True)
@@ -67,6 +71,7 @@ def get_aws_client(resource, **kwargs):
 
 
 # SNS specific utils
+
 
 def get_sns_topic_arn_by_name(topic):
     """Gets the ARN (Amazon Resource Name) for the given SNS topic"""
@@ -81,6 +86,7 @@ def get_or_create_sns_topic(client, topic):
     Parameters:
     * client {Boto3 SNS client}: The SNS client which will execute the request
     (returned by `get_aws_client("sns")`)
+    * topic {str}: The name of the topic
 
     Returns:
     * topic_arn {str}: The ARN of the topic
@@ -91,7 +97,7 @@ def get_or_create_sns_topic(client, topic):
         logger.exception(e)
         raise
 
-    return topic['TopicArn']
+    return topic["TopicArn"]
 
 
 def publish_message_to_sns_topic(client, topic, message, subject=None):
@@ -113,12 +119,13 @@ def publish_message_to_sns_topic(client, topic, message, subject=None):
     * message_id {str}: The `MessageId` as returned by AWS.
     """
     try:
-        response = client.publish(
+        response = client.publish(x
             TopicArn=get_sns_topic_arn_by_name(topic),
             Message=message,
-            Subject=subject)
-    except Excpetion as e:
-        logger.excpetion(e)
+            Subject=subject,
+        )
+    except Exception as e:
+        logger.exception(e)
         raise
 
     return response["MessageId"]
