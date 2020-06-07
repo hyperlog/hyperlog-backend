@@ -45,6 +45,16 @@ def get_model_object(model, **kwargs):
     return obj
 
 
+def get_error_message(error: Exception) -> str:
+    """Obtains the error message for an Exception.
+
+    Procedure:
+    1. See if exception has a 'message' attribute. If yes, return that.
+    2. Otherwise simply return `str(error)`
+    """
+    return getattr(error, "message", str(error))# General AWS utils
+
+
 # General AWS utils
 
 
