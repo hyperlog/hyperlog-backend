@@ -163,14 +163,26 @@ GITHUB_OAUTH_SCOPES = ["public_repo", "read:user", "user:email"]
 GITHUB_REDIRECT_URI = env("GITHUB_REDIRECT_URI", default="")
 
 
+# GRAPHQL
+
 GRAPHENE = {
     "SCHEMA": "hyperlog.schema.schema",
     "MIDDLEWARE": ["graphql_jwt.middleware.JSONWebTokenMiddleware"],
 }
 
+
+# DJANGO
+
+AUTH_USER_MODEL = "users.User"
 AUTHENTICATION_BACKENDS = [
     "graphql_jwt.backends.JSONWebTokenBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
 
-AUTH_USER_MODEL = "users.User"
+
+# AWS
+
+AWS_ACCOUNT_ID = str(env("AWS_ACCOUNT_ID", default=""))  # Ensure str type
+AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
+AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
+AWS_DEFAULT_REGION = env("AWS_DEFAULT_REGION", default="")
