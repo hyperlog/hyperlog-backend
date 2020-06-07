@@ -73,12 +73,17 @@ class Register(graphene.Mutation):
             errors = ["usernameAlreadyExists"]
             return Register(success=False, errors=errors)
 
-        # create user
-        user = User.objects.create(
+        try:
+            validate_email(email)
+        except ValidationError as e:
+            errors = [get_error_message(e)]
+            return Register(success=False, errors=errors)
+
+        user = User(
             username=username,
             email=email,
-            last_name=last_name,
             first_name=first_name,
+            last_name=last_name,
         )
         user.set_password(password)
         user.save()
