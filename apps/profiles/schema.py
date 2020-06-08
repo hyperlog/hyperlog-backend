@@ -130,15 +130,27 @@ class CreateNotification(graphene.Mutation):
 
     def mutate(self, info, user_id, **kwargs):
         try:
-            user = get_model_object(get_user_model(), id=user_id)
-            notification = create_model_object(
-                Notification, user=user, **kwargs
-            )
-            return CreateNotification(success=True, notification=notification)
+            # try to get the user
+            user_result = get_model_object(get_user_model(), id=user_id)
 
+            if user_result.success:
+                user = user_result.object
+            else:
+                # User could not be found
+                return CreateNotification(
+                    success=False, errors=[user_result.error_msg]
+                )
+
+            # validate and create notification object
+            result = create_model_object(Notification, user=user, **kwargs)
+            return CreateNotification(
+                success=result.success,
+                notification=result.object,
+                errors=[result.error_msg] if result.success is False else None,
+            )
         except Exception as e:
-            errors = [get_error_message(e)]
-            return CreateNotification(success=False, errors=errors)
+            logger.exception(e)
+            return CreateNotification(success=False, errors=["server error"])
 
 
 class MarkNotificationAsRead(graphene.Mutation):
