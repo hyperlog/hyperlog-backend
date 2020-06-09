@@ -138,7 +138,7 @@ class CreateNotification(graphene.Mutation):
             else:
                 # User could not be found
                 return CreateNotification(
-                    success=False, errors=[user_result.error_msg]
+                    success=False, errors=user_result.errors
                 )
 
             # validate and create notification object
@@ -146,7 +146,7 @@ class CreateNotification(graphene.Mutation):
             return CreateNotification(
                 success=result.success,
                 notification=result.object,
-                errors=[result.error_msg] if result.success is False else None,
+                errors=result.errors if result.success is False else None,
             )
         except Exception as e:
             logger.exception(e)

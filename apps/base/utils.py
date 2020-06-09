@@ -20,13 +20,13 @@ AWS_SNS_TOPIC_ARN_TEMPLATE = "arn:aws:sns:%s:%s:{topic}" % (
 class CreateModelResult(typing.NamedTuple):
     success: bool
     object: typing.Optional[models.Model] = None
-    error_msg: typing.Optional[str] = None
+    errors: typing.Optional[typing.List[str]] = None
 
 
 class GetModelResult(typing.NamedTuple):
     success: bool
     object: typing.Optional[models.Model] = None
-    error_msg: typing.Optional[str] = None
+    errors: typing.Optional[typing.List[str]] = None
 
 
 def create_model_object(
@@ -46,7 +46,7 @@ def create_model_object(
     * result {CreateModelResult}: A `CreateModelResult` object with the
     `success` attribute denoting whether creation was successful or not. If
     success is True, `result.object` will be the newly created object. If it is
-    False, `result.error_msg` will have the corresponding error message
+    False, `result.errors` will have the corresponding list of error messages
     """
     object = model(**kwargs)
 
@@ -54,7 +54,7 @@ def create_model_object(
         # Run validations
         object.full_clean()
     except ValidationError as e:
-        return CreateModelResult(success=False, error_msg=get_error_message(e))
+        return CreateModelResult(success=False, errors=get_error_messages(e))
 
     object.save()
     return CreateModelResult(success=True, object=object)
@@ -77,22 +77,20 @@ def get_model_object(
     `result.success` corresponding to whether the get operation was successful.
     If success is True, `result.object` will be the required object. If the
     operation was not successful due to a DoesNotExist or a
-    MultipleObjectsReturned exception, `result.error_msg` will have the
-    corresponding error message.
+    MultipleObjectsReturned exception, `result.errors` will have the
+    corresponding error messages list.
     """
     try:
         object = model.objects.get(**kwargs)
     except model.DoesNotExist:
-        error_msg = (
-            f"{model.__name__} with given query {kwargs} does not exist"
-        )
-        return GetModelResult(success=False, error_msg=error_msg)
+        errors = [f"{model.__name__} with given query {kwargs} does not exist"]
+        return GetModelResult(success=False, errors=errors)
     except model.MultipleObjectsReturned:
-        error_msg = (
+        errors = [
             f"{model.__name__} with given query {kwargs} "
             "returned multiple results"
-        )
-        return GetModelResult(success=False, error_msg=error_msg)
+        ]
+        return GetModelResult(success=False, errors=errors)
 
     return GetModelResult(success=True, object=object)
 
