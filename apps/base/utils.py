@@ -107,6 +107,16 @@ def get_error_message(error: Exception) -> str:
     return getattr(error, "message", str(error))
 
 
+def get_error_messages(error: Exception) -> typing.List[str]:
+    """An extension to the `get_error_message` util.
+    Sometimes some erros (specifically Django `ValidationError`s) may return a
+    list of error messages instead of a single message.
+
+    This method handles both the cases and returns a list of error(s).
+    """
+    return getattr(error, "messages", [get_error_message(error)])
+
+
 # General AWS utils
 
 

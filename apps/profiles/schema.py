@@ -13,7 +13,7 @@ from apps.profiles.models import (
 )
 from apps.base.utils import (
     create_model_object,
-    get_error_message,
+    get_error_messages,
     get_model_object,
 )
 
@@ -166,7 +166,7 @@ class MarkNotificationAsRead(graphene.Mutation):
             notification.read = True
             notification.save()
         except Exception as e:
-            errors = [get_error_message(e)]
+            errors = get_error_messages(e)
             return MarkNotificationAsRead(success=False, errors=errors)
 
         return MarkNotificationAsRead(success=True)
