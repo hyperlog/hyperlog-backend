@@ -7,6 +7,8 @@ from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
 from django.utils import timezone
 
+from apps.base.models import CICharField, CIEmailField
+
 
 class UserManager(BaseUserManager):
     def _create_user(
@@ -50,14 +52,14 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
-    username = models.CharField(
+    username = CICharField(
         verbose_name="Username",
         unique=True,
         max_length=30,
         validators=[UnicodeUsernameValidator()],
         error_messages={"unique": "A user with that username already exists"},
     )
-    email = models.EmailField(
+    email = CIEmailField(
         verbose_name="Email",
         unique=True,
         max_length=255,
