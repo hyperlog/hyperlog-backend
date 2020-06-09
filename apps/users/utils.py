@@ -1,5 +1,9 @@
 from itertools import chain
 
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+
+from apps.base.utils import CreateModelResult, get_error_messages
 from apps.users.models import DeletedUser, User
 
 
@@ -12,6 +16,33 @@ def to_dict(instance):
     for f in opts.many_to_many:
         data[f.name] = [i.id for i in f.value_from_object(instance)]
     return data
+
+
+def create_user(username, email, password, **kwargs) -> CreateModelResult:
+    """Util to create a user
+
+    Does the following:
+    1. Create a model with given kwargs as field-value pairs (username, email
+    and password are required)
+    2. Validate the model
+    3. Return the result as a `CreateModelResult` instance
+
+    See: `apps.base.utils.create_model_object`
+    """
+    # Force lowercase on username an email by default
+    user = get_user_model()(
+        username=username.lower(), email=email.lower(), **kwargs
+    )
+    user.set_password(password)
+
+    try:
+        # Run all validations
+        user.full_clean()
+    except ValidationError as e:
+        return CreateModelResult(success=False, errors=get_error_messages(e))
+
+    user.save()
+    return CreateModelResult(success=True, object=user)
 
 
 def delete_user(user: User) -> DeletedUser:

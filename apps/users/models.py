@@ -3,8 +3,11 @@ from django.contrib.auth.models import (
     BaseUserManager,
     PermissionsMixin,
 )
+from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
 from django.utils import timezone
+
+from apps.base.models import CICharField, CIEmailField
 
 
 class UserManager(BaseUserManager):
@@ -49,11 +52,18 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
-    username = models.CharField(
-        verbose_name="Username", unique=True, max_length=30
+    username = CICharField(
+        verbose_name="Username",
+        unique=True,
+        max_length=30,
+        validators=[UnicodeUsernameValidator()],
+        error_messages={"unique": "A user with that username already exists"},
     )
-    email = models.EmailField(
-        verbose_name="Email", unique=True, max_length=255
+    email = CIEmailField(
+        verbose_name="Email",
+        unique=True,
+        max_length=255,
+        error_messages={"unique": "A user with that email id already exists"},
     )
     first_name = models.CharField(
         verbose_name="First name", max_length=30, default="first"

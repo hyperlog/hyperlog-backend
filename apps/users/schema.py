@@ -13,7 +13,10 @@ from django.db.utils import Error as DjangoDBError
 
 from apps.base.utils import get_error_messages
 from apps.users.models import User
-from apps.users.utils import delete_user as delete_user_util
+from apps.users.utils import (
+    delete_user as delete_user_util,
+    create_user as create_user_util,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -65,29 +68,16 @@ class Register(graphene.Mutation):
         last_name = graphene.String(required=True)
 
     def mutate(self, info, email, username, password, first_name, last_name):
-        if User.objects.filter(email__iexact=email).exists():
-            errors = [f"The email id {email} has already been registered"]
-            return Register(success=False, errors=errors)
-
-        if User.objects.filter(username__iexact=username).exists():
-            errors = [f"The username {username} is already taken"]
-            return Register(success=False, errors=errors)
-
-        try:
-            validate_email(email)
-        except ValidationError as e:
-            errors = get_error_messages(e)
-            return Register(success=False, errors=errors)
-
-        user = User(
+        user_creation = create_user_util(
             username=username,
             email=email,
+            password=password,
             first_name=first_name,
             last_name=last_name,
         )
-        user.set_password(password)
-        user.save()
-        return Register(success=True)
+        return Register(
+            success=user_creation.success, errors=user_creation.errors
+        )
 
 
 class Logout(graphene.Mutation):
