@@ -156,11 +156,11 @@ class Notification(models.Model):
         validators=[
             MinValueValidator(
                 limit_value=LOW,
-                message="Value of priority should be at least 0",
+                message=f"Value of priority should be at least {LOW}",
             ),
             MaxValueValidator(
                 limit_value=HIGH,
-                message="Value of priority should be at most 2",
+                message=f"Value of priority should be at most {HIGH}",
             ),
         ],
         default=MEDIUM,
