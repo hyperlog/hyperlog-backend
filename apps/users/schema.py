@@ -66,11 +66,11 @@ class Register(graphene.Mutation):
 
     def mutate(self, info, email, username, password, first_name, last_name):
         if User.objects.filter(email__iexact=email).exists():
-            errors = ["emailAlreadyExists"]
+            errors = [f"The email id {email} has already been registered"]
             return Register(success=False, errors=errors)
 
         if User.objects.filter(username__iexact=username).exists():
-            errors = ["usernameAlreadyExists"]
+            errors = [f"The username {username} is already taken"]
             return Register(success=False, errors=errors)
 
         try:
