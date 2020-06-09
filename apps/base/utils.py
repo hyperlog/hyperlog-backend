@@ -1,9 +1,11 @@
 import logging
+import typing
 
 import boto3
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.db import models
 
 logger = logging.getLogger(__name__)
 
@@ -15,34 +17,82 @@ AWS_SNS_TOPIC_ARN_TEMPLATE = "arn:aws:sns:%s:%s:{topic}" % (
 )
 
 
-def create_model_object(model, **kwargs):
+class CreateModelResult(typing.NamedTuple):
+    success: bool
+    object: typing.Optional[models.Model] = None
+    errors: typing.Optional[typing.List[str]] = None
+
+
+class GetModelResult(typing.NamedTuple):
+    success: bool
+    object: typing.Optional[models.Model] = None
+    errors: typing.Optional[typing.List[str]] = None
+
+
+def create_model_object(
+    model: typing.Type[models.Model], **kwargs: typing.Any
+) -> CreateModelResult:
+    """
+    Attempts to create a model object. Runs validations and returns a
+    `CreateModelResult` instance.
+
+    Parameters:
+    * model {models.Model class}: The model for which the object is to be
+    created
+    * kwargs {keyword arguments}: The kwargs to be fed to the model class while
+    creating the object
+
+    Returns:
+    * result {CreateModelResult}: A `CreateModelResult` object with the
+    `success` attribute denoting whether creation was successful or not. If
+    success is True, `result.object` will be the newly created object. If it is
+    False, `result.errors` will have the corresponding list of error messages
+    """
+    object = model(**kwargs)
+
     try:
-        # Directly using model.objects.create() does not validate the data
-        obj = model(**kwargs)
-        obj.save()
-    except ValidationError:
-        error_msg = f"Validation failed for {model.__name__} with {kwargs}"
-        logger.exception(error_msg)
-        raise Exception(error_msg)
+        # Run validations
+        object.full_clean()
+    except ValidationError as e:
+        return CreateModelResult(success=False, errors=get_error_messages(e))
 
-    return obj
+    object.save()
+    return CreateModelResult(success=True, object=object)
 
 
-def get_model_object(model, **kwargs):
+def get_model_object(
+    model: typing.Type[models.Model], **kwargs: typing.Any
+) -> GetModelResult:
+    """
+    Tries to get a model with given kwargs. Handles DoesNotExist and
+    MultipleObjectsReturned exceptions
+
+    Parameters:
+    * model {models.Model class}: The model from which the object is to be
+    fetched
+    * kwargs: The conditions to be used while getting the model object
+
+    Returns:
+    * result {GetModelResult}: A `GetModelResult` object will be returned with
+    `result.success` corresponding to whether the get operation was successful.
+    If success is True, `result.object` will be the required object. If the
+    operation was not successful due to a DoesNotExist or a
+    MultipleObjectsReturned exception, `result.errors` will have the
+    corresponding error messages list.
+    """
     try:
-        obj = model.objects.get(**kwargs)
+        object = model.objects.get(**kwargs)
     except model.DoesNotExist:
-        error_msg = f"{model.__name__} with id {id} does not exist"
-        logger.exception(error_msg)
-        raise Exception(error_msg)
+        errors = [f"{model.__name__} with given query {kwargs} does not exist"]
+        return GetModelResult(success=False, errors=errors)
     except model.MultipleObjectsReturned:
-        error_msg = (
-            f"{model.__name__} with query {kwargs} returned multiple objects"
-        )
-        logger.exception(error_msg)
-        raise Exception(error_msg)
+        errors = [
+            f"{model.__name__} with given query {kwargs} "
+            "returned multiple results"
+        ]
+        return GetModelResult(success=False, errors=errors)
 
-    return obj
+    return GetModelResult(success=True, object=object)
 
 
 def get_error_message(error: Exception) -> str:
@@ -52,7 +102,17 @@ def get_error_message(error: Exception) -> str:
     1. See if exception has a 'message' attribute. If yes, return that.
     2. Otherwise simply return `str(error)`
     """
-    return getattr(error, "message", str(error))# General AWS utils
+    return getattr(error, "message", str(error))
+
+
+def get_error_messages(error: Exception) -> typing.List[str]:
+    """An extension to the `get_error_message` util.
+    Sometimes some erros (specifically Django `ValidationError`s) may return a
+    list of error messages instead of a single message.
+
+    This method handles both the cases and returns a list of error(s).
+    """
+    return getattr(error, "messages", [get_error_message(error)])
 
 
 # General AWS utils

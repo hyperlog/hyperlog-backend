@@ -11,7 +11,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db.utils import Error as DjangoDBError
 
-from apps.base.utils import get_error_message
+from apps.base.utils import get_error_messages
 from apps.users.models import User
 from apps.users.utils import delete_user as delete_user_util
 
@@ -66,17 +66,17 @@ class Register(graphene.Mutation):
 
     def mutate(self, info, email, username, password, first_name, last_name):
         if User.objects.filter(email__iexact=email).exists():
-            errors = ["emailAlreadyExists"]
+            errors = [f"The email id {email} has already been registered"]
             return Register(success=False, errors=errors)
 
         if User.objects.filter(username__iexact=username).exists():
-            errors = ["usernameAlreadyExists"]
+            errors = [f"The username {username} is already taken"]
             return Register(success=False, errors=errors)
 
         try:
             validate_email(email)
         except ValidationError as e:
-            errors = [get_error_message(e)]
+            errors = get_error_messages(e)
             return Register(success=False, errors=errors)
 
         user = User(
@@ -126,7 +126,7 @@ class UpdateUser(graphene.Mutation):
                 validate_email(email)
                 user.email = email
             except ValidationError as e:
-                errors = [get_error_message(e)]
+                errors = get_error_messages(e)
                 return UpdateUser(success=False, errors=errors)
 
         for field in ["first_name", "last_name"]:
@@ -137,7 +137,7 @@ class UpdateUser(graphene.Mutation):
             user.save()
             return UpdateUser(success=True)
         except DjangoDBError as e:
-            errors = [get_error_message(e)]
+            errors = get_error_messages(e)
             return UpdateUser(success=False, errors=errors)
         except Exception:
             # Hide the error log from user here as it could be a bug

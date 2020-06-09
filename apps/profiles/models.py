@@ -153,7 +153,17 @@ class Notification(models.Model):
         "users.User", on_delete=models.CASCADE, related_name="notifications"
     )
     priority = models.IntegerField(
-        validators=[MinValueValidator(0), MaxValueValidator(2)], default=MEDIUM
+        validators=[
+            MinValueValidator(
+                limit_value=LOW,
+                message=f"Value of priority should be at least {LOW}",
+            ),
+            MaxValueValidator(
+                limit_value=HIGH,
+                message=f"Value of priority should be at most {HIGH}",
+            ),
+        ],
+        default=MEDIUM,
     )
     read = models.BooleanField(default=False)
     heading = models.CharField(max_length=100)
