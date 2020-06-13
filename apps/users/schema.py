@@ -80,6 +80,66 @@ class Register(graphene.Mutation):
         )
 
 
+class IsUsernameValid(graphene.Mutation):
+    """Checks if a username is valid and can be registerd
+
+    Using the Mutation type so as to accommodate errors if any
+    """
+
+    success = graphene.Boolean()
+    errors = graphene.List(graphene.String)
+
+    class Arguments:
+        username = graphene.String(required=True)
+
+    def mutate(self, info, **kwargs):
+        try:
+            User._meta.get_field(User.USERNAME_FIELD).clean(
+                kwargs.get("username"), User
+            )
+        except ValidationError as e:
+            return IsUsernameValid(success=False, errors=get_error_messages(e))
+
+        if User.objects.filter(username=kwargs.get("username")).exists():
+            # Heads up: Removing the unique field from the error_messages
+            # attribute in the model definition will result in unrendered
+            # error messages like '%(model_name)s already has a ...'
+            err_msg = User._meta.get_field("username").error_messages["unique"]
+            return IsUsernameValid(success=False, errors=[err_msg])
+
+        return IsUsernameValid(success=True)
+
+
+class IsEmailValid(graphene.Mutation):
+    """Checks if an email address is valid and can be registered
+
+    Using the Mutation type so as to accommodate errors if any
+    """
+
+    success = graphene.Boolean()
+    errors = graphene.List(graphene.String)
+
+    class Arguments:
+        email = graphene.String(required=True)
+
+    def mutate(self, info, **kwargs):
+        try:
+            User._meta.get_field(User.EMAIL_FIELD).clean(
+                kwargs.get("email"), User
+            )
+        except ValidationError as e:
+            return IsEmailValid(success=False, errors=get_error_messages(e))
+
+        if User.objects.filter(email=kwargs.get("email")):
+            # Heads up: Removing the unique field from the error_messages
+            # attribute in the model definition will result in unrendered
+            # error messages like '%(model_name)s already has a ...'
+            err_msg = User._meta.get_field("username").error_messages["unique"]
+            return IsEmailValid(success=False, errors=[err_msg])
+
+        return IsEmailValid(success=True)
+
+
 class Logout(graphene.Mutation):
     """ Mutation to logout a user """
 
@@ -187,3 +247,5 @@ class Mutation(object):
     update_user = UpdateUser.Field()
     delete_user = DeleteUser.Field()
     update_password = UpdatePassword.Field()
+    is_username_valid = IsUsernameValid.Field()
+    is_email_valid = IsEmailValid.Field()
