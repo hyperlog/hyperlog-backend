@@ -179,6 +179,7 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
 ]
 
+STATIC_URL = "/static/"
 
 # AWS
 
