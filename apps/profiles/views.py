@@ -5,8 +5,8 @@ from github import Github
 from requests_oauthlib import OAuth2Session
 
 from django.conf import settings
-from django.http import JsonResponse, HttpResponseRedirect
-from django.shortcuts import redirect, render
+from django.http import HttpResponseRedirect
+from django.shortcuts import redirect
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 from graphql_jwt.decorators import jwt_cookie
@@ -46,12 +46,12 @@ def connect_github(request):
         try:
             jwt_get_payload(token)
         except JSONWebTokenExpired:
-            return JsonResponse({"error": "Expired token"})
+            return render_github_oauth_fail(request, errors=["Expired token"])
         except JSONWebTokenError:
-            return JsonResponse({"error": "Invalid token"})
+            return render_github_oauth_fail(request, errors=["Invalid token"])
     else:
         # If token parameter was not present
-        return JsonResponse({"error": "Missing token"})
+        return render_github_oauth_fail(request, errors=["Missing token"])
 
     response = HttpResponseRedirect(reverse("profiles:oauth_github"))
     response.set_cookie("JWT", token, max_age=30)
@@ -73,8 +73,8 @@ def oauth_github(request):
         request.session["oauth_github_state"] = state
         return redirect(authorization_url)
     else:
-        return JsonResponse(
-            {"success": False, "errors": ["User not authenticated"]}
+        return render_github_oauth_fail(
+            request, errors=["User not authenticated"]
         )
 
 
@@ -144,4 +144,6 @@ def test_template_fail(request):
 @require_http_methods(["GET"])
 def test_template_success(request):
     return render_github_oauth_success(request)
+
+
 # debugging stuff
