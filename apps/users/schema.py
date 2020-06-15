@@ -134,7 +134,7 @@ class IsEmailValid(graphene.Mutation):
             # Heads up: Removing the unique field from the error_messages
             # attribute in the model definition will result in unrendered
             # error messages like '%(model_name)s already has a ...'
-            err_msg = User._meta.get_field("username").error_messages["unique"]
+            err_msg = User._meta.get_field("email").error_messages["unique"]
             return IsEmailValid(success=False, errors=[err_msg])
 
         return IsEmailValid(success=True)
