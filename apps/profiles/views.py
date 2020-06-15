@@ -133,17 +133,3 @@ def oauth_github_callback(request):
         return render_github_oauth_fail(request, errors=["server error"])
 
     return render_github_oauth_success(request)
-
-
-# debugging stuff: remove later
-@require_http_methods(["GET"])
-def test_template_fail(request):
-    return render_github_oauth_fail(request, errors=["Error one", "Error two"])
-
-
-@require_http_methods(["GET"])
-def test_template_success(request):
-    return render_github_oauth_success(request)
-
-
-# debugging stuff
