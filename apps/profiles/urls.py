@@ -10,7 +10,7 @@ urlpatterns = [
         "auth/github/callback",
         views.oauth_github_callback,
         name="oauth_github_callback",
-    )
+    ),
 ]
 
 app_name = "profiles"
