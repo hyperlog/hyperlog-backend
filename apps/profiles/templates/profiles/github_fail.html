@@ -1,0 +1,16 @@
+{% extends "profiles/base.html" %}
+
+{% block title %}Failed{% endblock %}
+{% block content %}
+  <p><strong>❌️ Could not connect with GitHub</strong></p>
+  {% if errors %}
+    <p>
+      The following errors were encountered:
+      <ul>
+        {% for error in errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+    </p>
+  {% endif %}
+{% endblock %}

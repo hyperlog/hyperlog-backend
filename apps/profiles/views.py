@@ -5,7 +5,7 @@ from github import Github
 from requests_oauthlib import OAuth2Session
 
 from django.conf import settings
-from django.http import JsonResponse, HttpResponseRedirect
+from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
@@ -15,6 +15,10 @@ from graphql_jwt.utils import get_payload as jwt_get_payload
 
 from apps.base.utils import create_model_object
 from apps.profiles.models import GithubProfile, EmailAddress
+from apps.profiles.utils import (
+    render_github_oauth_fail,
+    render_github_oauth_success,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -42,12 +46,12 @@ def connect_github(request):
         try:
             jwt_get_payload(token)
         except JSONWebTokenExpired:
-            return JsonResponse({"error": "Expired token"})
+            return render_github_oauth_fail(request, errors=["Expired token"])
         except JSONWebTokenError:
-            return JsonResponse({"error": "Invalid token"})
+            return render_github_oauth_fail(request, errors=["Invalid token"])
     else:
         # If token parameter was not present
-        return JsonResponse({"error": "Missing token"})
+        return render_github_oauth_fail(request, errors=["Missing token"])
 
     response = HttpResponseRedirect(reverse("profiles:oauth_github"))
     response.set_cookie("JWT", token, max_age=30)
@@ -69,16 +73,16 @@ def oauth_github(request):
         request.session["oauth_github_state"] = state
         return redirect(authorization_url)
     else:
-        return JsonResponse(
-            {"success": False, "errors": ["User not authenticated"]}
+        return render_github_oauth_fail(
+            request, errors=["User not authenticated"]
         )
 
 
 @require_http_methods(["GET"])
 def oauth_github_callback(request):
     if request.user.is_anonymous:
-        return JsonResponse(
-            {"success": False, "errors": ["User not authenticated"]}
+        return render_github_oauth_fail(
+            request, errors=["User not authenticated"]
         )
 
     if not request.GET.get("code"):
@@ -90,9 +94,11 @@ def oauth_github_callback(request):
                 "error_uri": request.GET.get("error_uri"),
             }
             logger.error(f"Github OAuth error\n{error}")
-            return JsonResponse({"success": False, "errors": [error]})
-        return JsonResponse(
-            {"success": False, "errors": ["No code found in parameters"]}
+            return render_github_oauth_fail(
+                errors=[error["error_description"]]
+            )
+        return render_github_oauth_fail(
+            request, errors=["No code found in parameters"]
         )
 
     try:
@@ -124,6 +130,6 @@ def oauth_github_callback(request):
 
     except Exception:
         logger.error("Error while processing Github OAuth", exc_info=True)
-        return JsonResponse({"success": False})
+        return render_github_oauth_fail(request, errors=["server error"])
 
-    return JsonResponse({"success": True})
+    return render_github_oauth_success(request)
