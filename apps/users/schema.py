@@ -33,6 +33,7 @@ class UserType(DjangoObjectType):
             "registered_at",
             "profiles",
             "notifications",
+            "is_enrolled_for_mails",
         ]
 
 

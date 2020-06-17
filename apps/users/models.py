@@ -75,6 +75,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_admin = models.BooleanField(verbose_name="Admin", default=False)
     is_active = models.BooleanField(verbose_name="Active", default=True)
     is_staff = models.BooleanField(verbose_name="Staff", default=False)
+    is_enrolled_for_mails = models.BooleanField(
+        verbose_name="Enrolled in mailing list", default=True
+    )
     registered_at = models.DateTimeField(
         verbose_name="Registered at", auto_now_add=timezone.now
     )
