@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class ProfileType(DjangoObjectType):
     class Meta:
         model = BaseProfileModel
-        exclude = ("_provider", "emails")
+        exclude = ("_provider",)
 
     provider = graphene.String()
     emails = graphene.List(graphene.String)
