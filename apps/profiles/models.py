@@ -113,22 +113,13 @@ def get_profile_manager_by_provider(provider: str) -> models.Manager:
 class GithubProfile(BaseProfileModel):
     objects = get_profile_manager_by_provider("github")()
 
-    class Meta:
-        proxy = True
-
 
 class GitlabProfile(BaseProfileModel):
     objects = get_profile_manager_by_provider("gitlab")()
 
-    class Meta:
-        proxy = True
-
 
 class BitbucketProfile(BaseProfileModel):
     objects = get_profile_manager_by_provider("bitbucket")()
-
-    class Meta:
-        proxy = True
 
 
 class Notification(models.Model):
