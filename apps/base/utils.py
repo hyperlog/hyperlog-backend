@@ -95,6 +95,11 @@ def get_model_object(
     return GetModelResult(success=True, object=object)
 
 
+def validate_lowercase(value):
+    if not value.islower():
+        raise ValidationError(f"{value} is not in lowercase")
+
+
 def get_error_message(error: Exception) -> str:
     """Obtains the error message for an Exception.
 
