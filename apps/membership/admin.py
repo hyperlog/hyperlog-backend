@@ -1,6 +1,13 @@
 from django.contrib import admin
 
-from apps.membership.models import StripeProduct, StripePrice
+from apps.membership.models import (
+    StripeCustomer,
+    StripeProduct,
+    StripePrice,
+    StripeSubscription,
+)
 
-admin.register(StripeProduct)
-admin.register(StripePrice)
+admin.site.register(StripeCustomer)
+admin.site.register(StripeProduct)
+admin.site.register(StripePrice)
+admin.site.register(StripeSubscription)

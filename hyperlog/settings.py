@@ -188,3 +188,8 @@ AWS_ACCOUNT_ID = str(env("AWS_ACCOUNT_ID", default=""))  # Ensure str type
 AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
 AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
 AWS_DEFAULT_REGION = env("AWS_DEFAULT_REGION", default="")
+
+
+# Stripe
+
+STRIPE_API_KEY = env("STRIPE_API_KEY")
