@@ -13,7 +13,7 @@ class StripeProduct(models.Model):
 
     # For docs on ID length see:
     # https://stripe.com/docs/upgrades#what-changes-does-stripe-consider-to-be-backwards-compatible  # noqa
-    id = models.CharField(max_length=255)
+    id = models.CharField(max_length=255, primary_key=True)
     active = models.BooleanField()
     # For docs on max length of name and description, see:
     # https://stripe.com/docs/upgrades#2018-10-31
@@ -45,7 +45,7 @@ class StripePrice(models.Model):
 
     # For docs on ID length see:
     # https://stripe.com/docs/upgrades#what-changes-does-stripe-consider-to-be-backwards-compatible  # noqa
-    id = models.CharField(max_length=255)
+    id = models.CharField(max_length=255, primary_key=True)
     active = models.BooleanField(default=True)
     # Should be exactly 3 characters, all lowercase and supported by stripe
     currency = models.CharField(
@@ -118,7 +118,7 @@ class StripeCustomer(models.Model):
 
     # For docs on ID length see:
     # https://stripe.com/docs/upgrades#what-changes-does-stripe-consider-to-be-backwards-compatible  # noqa
-    id = models.CharField(max_length=255)
+    id = models.CharField(max_length=255, primary_key=True)
     description = models.TextField(blank=True)
     # The email here will be the one used by Stripe to notify the customer
     email = models.EmailField(max_length=255)
@@ -153,7 +153,7 @@ class StripeSubscription(models.Model):
 
     # For docs on ID length see:
     # https://stripe.com/docs/upgrades#what-changes-does-stripe-consider-to-be-backwards-compatible  # noqa
-    id = models.CharField(max_length=255)
+    id = models.CharField(max_length=255, primary_key=True)
     current_period_start = models.DateTimeField()
     current_period_end = models.DateTimeField()
     customer = models.ForeignKey(
