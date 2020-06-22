@@ -17,6 +17,7 @@ PyGithub = "^1.51"
 PyJWT = "^1.7.1"
 django-cors-headers = "^3.3.0"
 boto3 = "^1.13.24"
+stripe = "^2.48.0"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.8.2"

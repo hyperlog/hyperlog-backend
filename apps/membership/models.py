@@ -125,10 +125,10 @@ class StripeCustomer(models.Model):
     _metadata_json = models.TextField(
         default=json.dumps({})
     )  # JSON-encoded key-value pairs
-    user = models.ForeignKey(
+    user = models.OneToOneField(
         get_user_model(),
         on_delete=models.CASCADE,
-        related_name="Stripe Customer",
+        related_name="stripe_customer",
     )
 
     def metadata():
