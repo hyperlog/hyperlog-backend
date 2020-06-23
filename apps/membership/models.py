@@ -188,7 +188,9 @@ class StripeSubscription(models.Model):
         def fget(self):  # noqa: E306
             return self.get__status_display()
         def fset(self, value):  # noqa: E306
-            self._status = value
+            self._status = getattr(
+                StripeSubscription, f"STATUS_{value.upper()}"
+            )
         return locals()
     status = property(**status())
     # fmt: on
