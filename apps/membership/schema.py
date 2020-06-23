@@ -123,6 +123,72 @@ class CreateStripeSubscription(graphene.Mutation):
         )
 
 
+class RetryStripeSubscription(graphene.Mutation):
+    success = graphene.Boolean()
+    errors = graphene.List(graphene.String)
+    invoice = graphene.String()  # JSON-encoded string representing invoice
+
+    class Arguments:
+        payment_method_id = graphene.String(required=True)
+        invoice_id = graphene.String(required=True)
+
+    @login_required
+    def mutate(self, info, payment_method_id, invoice_id):
+        user = info.context.user
+        customer = user.stripe_customer
+
+        try:
+            stripe.PaymentMethod.attach(
+                payment_method_id, customer=customer.id
+            )
+            # Set default payment method
+            stripe.Customer.modify(
+                customer.id,
+                invoice_settings={"default_payment_method": payment_method_id},
+            )
+
+            invoice = stripe.Invoice.retrieve(
+                invoice_id, expand=["payment_intent"]
+            )
+            return RetryStripeSubscription(success=True, invoice=str(invoice))
+
+        except Exception as e:
+            return RetryStripeSubscription(
+                success=False, errors=get_error_messages(e)
+            )
+
+
+class CancelStripeSubscription(graphene.Mutation):
+    success = graphene.Boolean()
+    errors = graphene.List(graphene.String)
+    subscription = graphene.String()  # JSON-encoded deleted subscription
+
+    @login_required
+    def mutate(self, info):
+        user = info.context.user
+        customer = user.stripe_customer
+
+        if hasattr(customer, "subscription"):
+            subscription = customer.subscription
+        else:
+            error = "No associated subscription found"
+            return CancelStripeSubscription(success=False, errors=[error])
+
+        try:
+            deleted_subscription = stripe.Subscription.delete(subscription.id)
+        except Exception as e:
+            return CancelStripeSubscription(
+                success=False, errors=get_error_messages(e)
+            )
+
+        subscription.delete()
+        return CancelStripeSubscription(
+            success=True, subscription=str(deleted_subscription)
+        )
+
+
 class Mutation(graphene.ObjectType):
     create_stripe_customer = CreateStripeCustomer.Field()
     create_stripe_subscription = CreateStripeSubscription.Field()
+    retry_stripe_subscription = RetryStripeSubscription.Field()
+    cancel_stripe_subscription = CancelStripeSubscription.Field()

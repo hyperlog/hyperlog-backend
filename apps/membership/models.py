@@ -164,8 +164,9 @@ class StripeSubscription(models.Model):
     id = models.CharField(max_length=255, primary_key=True)
     current_period_start = models.DateTimeField()
     current_period_end = models.DateTimeField()
-    customer = models.ForeignKey(
-        StripeCustomer, on_delete=models.CASCADE, related_name="subscriptions"
+    # OneToOne because one customer can only have one subscription at a time
+    customer = models.OneToOneField(
+        StripeCustomer, on_delete=models.CASCADE, related_name="subscription"
     )
     # Disallows deleting price if a subscription using that price exists
     price = models.ForeignKey(
