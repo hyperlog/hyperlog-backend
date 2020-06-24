@@ -26,13 +26,12 @@ class CreateStripeCustomer(graphene.Mutation):
     errors = graphene.List(graphene.String)
 
     class Arguments:
-        email = graphene.String(required=True)
         description = graphene.String()
 
     @login_required
     def mutate(self, info, **kwargs):
         user = info.context.user
-        email = kwargs.get("email")
+        email = user.email
         try:
             validate_email(email)
         except ValidationError as e:
