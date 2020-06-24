@@ -1,7 +1,11 @@
 import logging
 from datetime import datetime
 
-from apps.membership.models import StripePrice, StripeSubscription
+from apps.membership.models import (
+    StripeProduct,
+    StripePrice,
+    StripeSubscription,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -54,3 +58,66 @@ def update_subscription_from_db(subscription_id, stripe_subscription):
 
     subscription_from_db.full_clean()
     subscription_from_db.save()
+
+
+def save_product_to_db(stripe_product):
+    """
+    Takes a stripe.Product as argument and attempts to save it to the database
+    """
+    id = stripe_product.id
+    if StripeProduct.objects.filter(id=id).exists():
+        logger.warning("Product %s already exists" % id)
+        return
+
+    db_product = StripeProduct(
+        id=id,
+        active=stripe_product.active,
+        name=stripe_product.name,
+        description=stripe_product.description or "",
+    )
+    if stripe_product.metadata:
+        db_product.metadata = stripe_product.metadata
+
+    db_product.full_clean()
+    db_product.save()
+
+
+def save_price_to_db(stripe_price):
+    """
+    Takes a stripe.Product as argument and attempts to save it to the database
+    """
+    id = stripe_price.id
+    if StripePrice.objects.filter(id=id).exists():
+        logger.warning("Price %s already exists" % id)
+
+    try:
+        related_product = StripeProduct.objects.get(id=stripe_price.product)
+    except StripeProduct.DoesNotExist:
+        logger.error(
+            "Cannot save price %(price_id)s to database. "
+            "Related product %(product_id)s does not exist"
+            % {
+                "price_id": stripe_price.id,
+                "product_id": stripe_price.product,
+            }
+        )
+        raise
+
+    db_price = StripePrice(
+        id=id,
+        active=stripe_price.active,
+        currency=stripe_price.currency,
+        nickname=stripe_price.nickname or "",
+        product=related_product,
+        type=stripe_price.type,
+        unit_amount=stripe_price.unit_amount,
+    )
+
+    if stripe_price.metadata:
+        db_price.metadata = stripe_price.metadata
+
+    if stripe_price.recurring:
+        db_price.recurring = stripe_price.recurring
+
+    db_price.full_clean()
+    db_price.save()
