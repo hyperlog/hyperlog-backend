@@ -2,6 +2,7 @@ import graphene
 
 import apps.users.schema
 import apps.profiles.schema
+import apps.membership.schema
 
 
 class Query(
@@ -11,6 +12,7 @@ class Query(
 
 
 class Mutation(
+    apps.membership.schema.Mutation,
     apps.profiles.schema.Mutation,
     apps.users.schema.Mutation,
     graphene.ObjectType,

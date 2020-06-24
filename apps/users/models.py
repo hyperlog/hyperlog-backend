@@ -106,6 +106,14 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     short_name.fget.short_description = "Short name"
 
+    @property
+    def is_member(self):
+        return (
+            hasattr(self, "customer")
+            and hasattr(self.customer, "subscription")
+            and getattr(self.customer.subscription, "status", None) == "active"
+        )
+
     def get_full_name(self):
         return self.full_name
 
