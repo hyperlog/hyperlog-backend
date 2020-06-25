@@ -32,10 +32,12 @@ class UserType(DjangoObjectType):
             "first_name",
             "last_name",
             "registered_at",
-            "profiles",
-            "notifications",
             "is_enrolled_for_mails",
             "uuid",
+            # From relations
+            "profiles",
+            "notifications",
+            "widget",
         ]
 
 

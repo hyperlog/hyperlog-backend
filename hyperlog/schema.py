@@ -2,6 +2,7 @@ import graphene
 
 import apps.users.schema
 import apps.profiles.schema
+import apps.widgets.schema
 
 
 class Query(
@@ -13,6 +14,7 @@ class Query(
 class Mutation(
     apps.profiles.schema.Mutation,
     apps.users.schema.Mutation,
+    apps.widgets.schema.Mutation,
     graphene.ObjectType,
 ):
     pass
