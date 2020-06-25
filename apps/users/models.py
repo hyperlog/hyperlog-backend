@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
@@ -80,6 +82,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
     registered_at = models.DateTimeField(
         verbose_name="Registered at", auto_now_add=timezone.now
+    )
+
+    uuid = models.UUIDField(
+        verbose_name="UUID code", unique=True, default=uuid.uuid4
     )
 
     # Fields settings

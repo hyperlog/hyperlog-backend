@@ -16,7 +16,7 @@ class UserAdmin(BaseUserAdmin):
     list_display = ["full_name", "email"]
     fieldsets = [
         ["Auth", {"fields": ["username", "password"]}],
-        ["Personal info", {"fields": ["last_name", "first_name"]},],
+        ["Personal info", {"fields": ["last_name", "first_name"]}],
         [
             "Settings",
             {
@@ -30,6 +30,7 @@ class UserAdmin(BaseUserAdmin):
             },
         ],
         ["Important dates", {"fields": ["last_login", "registered_at"]}],
+        ["Hyperlog", {"fields": ["uuid"]}],
     ]
     # add_fieldsets is not a standard ModelAdmin attribute. UserAdmin
     # overrides get_fieldsets to use this attribute when creating a user.
