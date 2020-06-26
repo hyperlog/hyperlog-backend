@@ -1,6 +1,6 @@
 from django.shortcuts import render
 
-from apps.base.utils import dynamodb_create_or_update_item
+from apps.base.utils import get_aws_client
 
 DYNAMODB_PROFILES_TABLE_NAME = "profiles"
 GITHUB_SUCCESS_TEMPLATE_PATH = "profiles/github_success.html"
@@ -33,10 +33,17 @@ def render_github_oauth_fail(request, **kwargs):
 
 def dynamodb_create_or_update_profile(profile):
     """Uses DynamoDB PutItem to create/update a profile on DynamoDB"""
-    attrs = {
-        "user_id": {"S": str(profile.user.id)},
-        f"{profile.provider}_access_token": {"S": profile.access_token},
-    }
-    return dynamodb_create_or_update_item(
-        table_name=DYNAMODB_PROFILES_TABLE_NAME, attrs=attrs
+    client = get_aws_client("dynamodb")
+
+    key = {"user_id": {"S": str(profile.user.id)}}
+    expression_attribute_names = {"#AT": "%s_access_token" % profile.provider}
+    expression_attribute_values = {":t": {"S": profile.access_token}}
+    update_expression = "SET #AT = :t"
+
+    return client.update_item(
+        TableName=DYNAMODB_PROFILES_TABLE_NAME,
+        Key=key,
+        UpdateExpression=update_expression,
+        ExpressionAttributeNames=expression_attribute_names,
+        ExpressionAttributeValues=expression_attribute_values,
     )

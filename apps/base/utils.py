@@ -241,34 +241,3 @@ def create_sqs_queue(queue_name, attributes=None, tags=None):
     return sqs.create_queue(
         QueueName=queue_name, Attributes=attributes, Tags=tags
     )
-
-
-# DynamoDB
-
-
-def dynamodb_create_or_update_item(
-    table_name: str,
-    attrs: typing.Dict[str, typing.Dict[str, typing.Any]],
-    **kwargs,
-) -> typing.Dict[str, typing.Any]:
-    """
-    Creates a DynamoDB item in table `table_name` and attributes `attrs` by
-    using UpdateItem API.
-
-    Parameters:
-    * client {boto3.Client}: The DynamoDB client to use to make the request
-    * table_name {str}: The name of the table in which the item should be
-    created
-    * attrs {Dict[str, Dict[str, Any]]}: DynamoDB `AttributeValues` of format
-    `{"key": {"type": value}}`
-    * kwargs: Dict[str, Any]: Wildcard kwargs to be used in the
-    `client.put_item(...)` call
-
-    See: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb.html  # noqa
-
-    Returns:
-    * response {Dict[str, Any]}: The response as returned to boto3's call
-    """
-
-    client = get_aws_client("dynamodb")
-    return client.update_item(TableName=table_name, Item=attrs, **kwargs)
