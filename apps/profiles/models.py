@@ -40,7 +40,7 @@ class BaseProfileModel(models.Model):
 
     def __str__(self):
         return (
-            f"<Profile provider: {self._provider} username: {self.username}>"
+            f"<Profile provider: {self.provider}, username: {self.username}>"
         )
 
 
