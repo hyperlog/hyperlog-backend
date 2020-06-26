@@ -40,7 +40,7 @@ class BaseProfileModel(models.Model):
 
     def __str__(self):
         return (
-            f"Profile <provider: {self._provider}, username: {self.username}>"
+            f"<Profile provider: {self._provider} username: {self.username}>"
         )
 
 
@@ -139,4 +139,7 @@ class Notification(models.Model):
     sub = models.TextField(blank=True)
 
     def __str__(self):
-        return f"Notification <UserID: {self.user.id}, heading: {self.heading}"
+        return "<Notification User: %(username)s heading: %(heading)s>" % {
+            "username": self.user.username,
+            "heading": self.heading,
+        }

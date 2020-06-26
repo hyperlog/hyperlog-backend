@@ -149,13 +149,6 @@ USE_TZ = True
 STATIC_URL = "/static/"
 
 
-# Redis
-
-REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
-REDIS_PORT = os.environ.get("REDIS_PORT", 6379)
-REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", None)
-
-
 # GitHub OAuth
 
 GITHUB_CLIENT_ID = env("GITHUB_CLIENT_ID", default="")
@@ -184,7 +177,7 @@ STATIC_URL = "/static/"
 
 # AWS
 
-AWS_ACCOUNT_ID = str(env("AWS_ACCOUNT_ID", default=""))  # Ensure str type
-AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
-AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
-AWS_DEFAULT_REGION = env("AWS_DEFAULT_REGION", default="")
+AWS_ACCOUNT_ID = str(env("AWS_ACCOUNT_ID", default="x"))  # Ensure str type
+AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="x")
+AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="x")
+AWS_DEFAULT_REGION = env("AWS_DEFAULT_REGION", default="us-east-1")

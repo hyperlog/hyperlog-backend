@@ -1,29 +1,10 @@
-from redis import Redis
-
-from django.conf import settings
 from django.shortcuts import render
 
 from apps.base.utils import dynamodb_create_or_update_item
 
-PROFILES_QUEUE = "queue:profiles"
 DYNAMODB_PROFILES_TABLE_NAME = "profiles"
 GITHUB_SUCCESS_TEMPLATE_PATH = "profiles/github_success.html"
 GITHUB_FAIL_TEMPLATE_PATH = "profiles/github_fail.html"
-
-
-class RedisInterface:
-    def __init__(self, **kwargs):
-        self._conn = Redis(
-            host=settings.REDIS_HOST,
-            port=settings.REDIS_PORT,
-            password=settings.REDIS_PASSWORD,
-            **kwargs,
-        )
-
-    def push_to_profiles_queue(self, payload):
-        """Expects payload to be a JSON-encoded object"""
-        self._conn.rpush(PROFILES_QUEUE, payload)
-        # TODO: Add log info of payload being pushed
 
 
 def render_github_oauth_success(request, **kwargs):
