@@ -1,5 +1,4 @@
 import logging
-import uuid
 
 import graphene
 import graphql_jwt
@@ -33,7 +32,6 @@ class UserType(DjangoObjectType):
             "last_name",
             "registered_at",
             "is_enrolled_for_mails",
-            "uuid",
             # From relations
             "profiles",
             "notifications",
@@ -42,7 +40,7 @@ class UserType(DjangoObjectType):
 
 
 class Query(graphene.ObjectType):
-    user = graphene.Field(UserType, id=graphene.Int(required=True))
+    user = graphene.Field(UserType, id=graphene.String(required=True))
     users = graphene.List(UserType)
     this_user = graphene.Field(UserType)
 
@@ -225,28 +223,6 @@ class UpdatePassword(graphene.Mutation):
             return UpdatePassword(success=False, errors=errors)
 
 
-class ResetUUID(graphene.Mutation):
-    """Reset UUID of current user"""
-
-    success = graphene.Boolean()
-    errors = graphene.List(graphene.String)
-    uuid = graphene.UUID()
-
-    @login_required
-    def mutate(self, info):
-        user = info.context.user
-        user.uuid = uuid.uuid4()
-
-        try:
-            user.full_clean()
-            user.save()
-        except Exception as e:
-            logger.exception(e)
-            return ResetUUID(success=False, errors=["server error"])
-
-        return ResetUUID(success=True, uuid=user.uuid)
-
-
 class DeleteUser(graphene.Mutation):
     """Mutation to delete a user"""
 
@@ -276,4 +252,3 @@ class Mutation(object):
     update_password = UpdatePassword.Field()
     is_username_valid = IsUsernameValid.Field()
     is_email_valid = IsEmailValid.Field()
-    reset_uuid = ResetUUID.Field(name="resetUUID")

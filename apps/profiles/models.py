@@ -45,14 +45,14 @@ class BaseProfileModel(models.Model):
         {
           "provider": "github",
           "access_token": "the access token",
-          "user_id": 1
+          "user_id": "8ece5fbb-7bbc-4014-bc88-5d04c5154b74"  # user id as UUID
         }
         """
         return json.dumps(
             {
                 "provider": self._provider,
                 "access_token": self.access_token,
-                "user_id": self.user.id,
+                "user_id": str(self.user.id),
             }
         )
 

@@ -36,11 +36,11 @@ class IncrementImpressions(graphene.Mutation):
     widget = graphene.Field(WidgetType)
 
     class Arguments:
-        code = graphene.UUID(required=True)
+        user_id = graphene.UUID(required=True)
 
-    def mutate(self, info, code):
+    def mutate(self, info, user_id):
         User = get_user_model()
-        get_user = get_model_object(User, uuid=code)
+        get_user = get_model_object(User, id=user_id)
 
         if get_user.success:
             user = get_user.object
@@ -63,11 +63,11 @@ class IncrementClicks(graphene.Mutation):
     widget = graphene.Field(WidgetType)
 
     class Arguments:
-        code = graphene.UUID(required=True)
+        user_id = graphene.UUID(required=True)
 
-    def mutate(self, info, code):
+    def mutate(self, info, user_id):
         User = get_user_model()
-        get_user = get_model_object(User, uuid=code)
+        get_user = get_model_object(User, id=user_id)
 
         if get_user.success:
             user = get_user.object

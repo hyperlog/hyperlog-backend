@@ -54,6 +54,7 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = CICharField(
         verbose_name="Username",
         unique=True,
@@ -82,10 +83,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
     registered_at = models.DateTimeField(
         verbose_name="Registered at", auto_now_add=timezone.now
-    )
-
-    uuid = models.UUIDField(
-        verbose_name="UUID code", unique=True, default=uuid.uuid4
     )
 
     # Fields settings
@@ -134,7 +131,7 @@ class DeletedUser(models.Model):
     registered_at = models.DateTimeField(verbose_name="Registered at")
 
     # Fields specific to DeletedUser
-    old_user_id = models.IntegerField(verbose_name="Old User ID")
+    old_user_id = models.UUIDField(verbose_name="Old User ID")
     deleted_at = models.DateTimeField(
         verbose_name="Deleted at", auto_now_add=timezone.now
     )
