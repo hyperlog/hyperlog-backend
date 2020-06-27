@@ -1,4 +1,6 @@
 boto3==1.13.24
+channels==2.4.0
+daphne==2.5.0
 Django==2.2
 django-cors-headers==3.3.0
 django-environ==0.4.5
