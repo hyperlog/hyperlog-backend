@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "apps.base",
     "apps.users",
     "apps.profiles",
+    "apps.widgets",
 ]
 
 MIDDLEWARE = [
@@ -114,16 +115,16 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",  # noqa: E501
     },
     {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",  # noqa: E501
     },
     {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",  # noqa: E501
     },
     {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",  # noqa: E501
     },
 ]
 
@@ -146,13 +147,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
 STATIC_URL = "/static/"
-
-
-# Redis
-
-REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
-REDIS_PORT = os.environ.get("REDIS_PORT", 6379)
-REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", None)
 
 
 # GitHub OAuth
@@ -183,7 +177,7 @@ STATIC_URL = "/static/"
 
 # AWS
 
-AWS_ACCOUNT_ID = str(env("AWS_ACCOUNT_ID", default=""))  # Ensure str type
-AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
-AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
-AWS_DEFAULT_REGION = env("AWS_DEFAULT_REGION", default="")
+AWS_ACCOUNT_ID = str(env("AWS_ACCOUNT_ID", default="x"))  # Ensure str type
+AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="x")
+AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="x")
+AWS_DEFAULT_REGION = env("AWS_DEFAULT_REGION", default="us-east-1")

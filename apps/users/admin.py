@@ -16,7 +16,7 @@ class UserAdmin(BaseUserAdmin):
     list_display = ["full_name", "email"]
     fieldsets = [
         ["Auth", {"fields": ["username", "password"]}],
-        ["Personal info", {"fields": ["last_name", "first_name"]},],
+        ["Personal info", {"fields": ["last_name", "first_name"]}],
         [
             "Settings",
             {

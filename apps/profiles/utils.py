@@ -1,26 +1,10 @@
-from redis import Redis
-
-from django.conf import settings
 from django.shortcuts import render
 
-PROFILES_QUEUE = "queue:profiles"
+from apps.base.utils import get_aws_client
+
+DYNAMODB_PROFILES_TABLE_NAME = "profiles"
 GITHUB_SUCCESS_TEMPLATE_PATH = "profiles/github_success.html"
 GITHUB_FAIL_TEMPLATE_PATH = "profiles/github_fail.html"
-
-
-class RedisInterface:
-    def __init__(self, **kwargs):
-        self._conn = Redis(
-            host=settings.REDIS_HOST,
-            port=settings.REDIS_PORT,
-            password=settings.REDIS_PASSWORD,
-            **kwargs,
-        )
-
-    def push_to_profiles_queue(self, payload):
-        """Expects payload to be a JSON-encoded object"""
-        self._conn.rpush(PROFILES_QUEUE, payload)
-        # TODO: Add log info of payload being pushed
 
 
 def render_github_oauth_success(request, **kwargs):
@@ -45,3 +29,21 @@ def render_github_oauth_fail(request, **kwargs):
     ```
     """
     return render(request, GITHUB_FAIL_TEMPLATE_PATH, kwargs)
+
+
+def dynamodb_create_or_update_profile(profile):
+    """Uses DynamoDB PutItem to create/update a profile on DynamoDB"""
+    client = get_aws_client("dynamodb")
+
+    key = {"user_id": {"S": str(profile.user.id)}}
+    expression_attribute_names = {"#AT": "%s_access_token" % profile.provider}
+    expression_attribute_values = {":t": {"S": profile.access_token}}
+    update_expression = "SET #AT = :t"
+
+    return client.update_item(
+        TableName=DYNAMODB_PROFILES_TABLE_NAME,
+        Key=key,
+        UpdateExpression=update_expression,
+        ExpressionAttributeNames=expression_attribute_names,
+        ExpressionAttributeValues=expression_attribute_values,
+    )

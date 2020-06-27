@@ -31,14 +31,16 @@ class UserType(DjangoObjectType):
             "first_name",
             "last_name",
             "registered_at",
+            "is_enrolled_for_mails",
+            # From relations
             "profiles",
             "notifications",
-            "is_enrolled_for_mails",
+            "widget",
         ]
 
 
 class Query(graphene.ObjectType):
-    user = graphene.Field(UserType, id=graphene.Int(required=True))
+    user = graphene.Field(UserType, id=graphene.String(required=True))
     users = graphene.List(UserType)
     this_user = graphene.Field(UserType)
 

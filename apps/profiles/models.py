@@ -1,10 +1,11 @@
-import json
 import logging
+
+import botocore
 
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from apps.profiles.utils import RedisInterface
+from apps.profiles.utils import dynamodb_create_or_update_profile
 
 logger = logging.getLogger(__name__)
 
@@ -33,42 +34,14 @@ class BaseProfileModel(models.Model):
         # There should be only one profile with a provider and username pair
         unique_together = ["_provider", "username"]
 
+    @property
+    def provider(self):
+        return self._provider
+
     def __str__(self):
         return (
-            f"Profile <provider: {self._provider}, username: {self.username}>"
+            f"<Profile provider: {self.provider}, username: {self.username}>"
         )
-
-    def _get_payload(self):
-        """Creates a JSON-encoded payload to send to Redis
-
-        Payload format:
-        {
-          "provider": "github",
-          "access_token": "the access token",
-          "user_id": 1
-        }
-        """
-        return json.dumps(
-            {
-                "provider": self._provider,
-                "access_token": self.access_token,
-                "user_id": self.user.id,
-            }
-        )
-
-    def push_to_queue(self):
-        """Pushes the payload obtained from _get_redis_payload to Redis"""
-        r = RedisInterface()
-        payload = self._get_payload()
-
-        try:
-            r.push_to_profiles_queue(payload)
-        except Exception:
-            # Log the error so that payload can be pushed later
-            logger.error(
-                f"Error while pushing payload '{payload}' to Redis queue",
-                exc_info=True,
-            )
 
 
 def get_profile_manager_by_provider(provider: str) -> models.Manager:
@@ -104,7 +77,12 @@ def get_profile_manager_by_provider(provider: str) -> models.Manager:
                 )
             kwargs["_provider"] = provider
             profile_obj = super().create(**kwargs)
-            profile_obj.push_to_queue()
+
+            try:
+                dynamodb_create_or_update_profile(profile_obj)
+            except botocore.exceptions.ClientError:
+                logger.error("DynamoDB error encountered", exc_info=True)
+
             return profile_obj
 
     return ProfileManager
@@ -161,4 +139,7 @@ class Notification(models.Model):
     sub = models.TextField(blank=True)
 
     def __str__(self):
-        return f"Notification <UserID: {self.user.id}, heading: {self.heading}"
+        return "<Notification User: %(username)s heading: %(heading)s>" % {
+            "username": self.user.username,
+            "heading": self.heading,
+        }
