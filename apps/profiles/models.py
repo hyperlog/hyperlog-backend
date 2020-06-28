@@ -79,6 +79,7 @@ def get_profile_manager_by_provider(provider: str) -> models.Manager:
                     "_provider field can only be specified in model definition"
                 )
             kwargs["_provider"] = provider
+            # Convert non-str types (int, uuid) to str for provider_uid
             kwargs["provider_uid"] = str(kwargs["provider_uid"])
             profile_obj = super().create(**kwargs)
 
