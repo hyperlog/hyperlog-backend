@@ -115,10 +115,10 @@ def oauth_github_callback(request):
         g = Github(access_token)
         github_details = g.get_user()
 
-        # TODO: Add UID to model creation kwargs
         profile = GithubProfile.objects.create(
             access_token=access_token,
             username=github_details.login,
+            provider_uid=github_details.id,
             user=request.user,
         )
 
