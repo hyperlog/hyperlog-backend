@@ -91,6 +91,8 @@ def get_model_object(
             "returned multiple results"
         ]
         return GetModelResult(success=False, errors=errors)
+    except ValidationError as e:
+        return GetModelResult(success=False, errors=get_error_messages(e))
 
     return GetModelResult(success=True, object=object)
 

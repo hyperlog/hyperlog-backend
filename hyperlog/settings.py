@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     # third-party apps
+    "channels",
     "corsheaders",
     "graphene_django",
     # local apps
@@ -92,7 +93,10 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "hyperlog.wsgi.application"
+
+# Channels
+
+ASGI_APPLICATION = "hyperlog.routing.application"
 
 
 # Database
