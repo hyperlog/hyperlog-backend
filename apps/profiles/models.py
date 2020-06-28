@@ -22,6 +22,9 @@ class EmailAddress(models.Model):
 
 class BaseProfileModel(models.Model):
     _provider = models.CharField(max_length=20)
+    # Have to be flexible about ids because github/gitlab's ids are integers
+    # but BitBucket uses uuid. CharField can take any type
+    provider_uid = models.CharField(max_length=255)
     username = models.CharField(
         max_length=255
     )  # Gitlab allows up to 255 chars
@@ -31,8 +34,8 @@ class BaseProfileModel(models.Model):
     )
 
     class Meta:
-        # There should be only one profile with a provider and username pair
-        unique_together = ["_provider", "username"]
+        # There should be only one profile with the same provider and uid pair
+        unique_together = ["_provider", "provider_uid"]
 
     @property
     def provider(self):
@@ -76,6 +79,8 @@ def get_profile_manager_by_provider(provider: str) -> models.Manager:
                     "_provider field can only be specified in model definition"
                 )
             kwargs["_provider"] = provider
+            # Convert non-str types (int, uuid) to str for provider_uid
+            kwargs["provider_uid"] = str(kwargs["provider_uid"])
             profile_obj = super().create(**kwargs)
 
             try:
