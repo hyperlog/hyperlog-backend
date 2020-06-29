@@ -1,5 +1,6 @@
 import logging
 
+import botocore
 import graphene
 from graphene_django import DjangoObjectType
 from graphql_jwt.decorators import staff_member_required, login_required
@@ -10,14 +11,21 @@ from apps.profiles.models import (
     BaseProfileModel,
     EmailAddress,
     Notification,
+    ProfileAnalysis,
 )
 from apps.base.utils import (
     create_model_object,
     get_error_messages,
     get_model_object,
 )
+from apps.profiles.utils import (
+    dynamodb_get_analysis_status_by_user_id,
+    push_profile_analysis_to_sqs_queue,
+)
 
 logger = logging.getLogger(__name__)
+
+MAX_PROFILE_ANALYSES_PER_USER = 5
 
 
 class ProfileType(DjangoObjectType):
@@ -172,7 +180,79 @@ class MarkNotificationAsRead(graphene.Mutation):
         return MarkNotificationAsRead(success=True)
 
 
+class AnalyseProfile(graphene.Mutation):
+    success = graphene.Boolean()
+    errors = graphene.List(graphene.String)
+
+    @login_required
+    def mutate(self, info):
+        user = info.context.user
+
+        # Check if user has finished their quota
+        if (
+            hasattr(user, "profile_analyses")
+            and len(user.profile_analyses.all())
+            >= MAX_PROFILE_ANALYSES_PER_USER
+        ):
+            error = "You've completed the limit of 5 runs of profile analysis"
+            return AnalyseProfile(success=False, errors=[error])
+
+        # Get the github token if a github account is associated with user
+        if hasattr(user, "profiles"):
+            try:
+                gh_profile = user.profiles.get(_provider="github")
+            except BaseProfileModel.DoesNotExist:
+                error = "No github account is associated with the user"
+                return AnalyseProfile(success=False, errors=[error])
+        else:
+            error = "No github account is associated with the user"
+            return AnalyseProfile(success=False, errors=[error])
+
+        github_token = gh_profile.access_token
+
+        # Check if an analyse task is already running
+        try:
+            status = dynamodb_get_analysis_status_by_user_id(user.id)
+        except Exception as e:
+            logger.exception(e)
+            return AnalyseProfile(success=False, errors=["server error"])
+
+        if status == "in_progress":
+            error = "You already have an analysis running. Please wait"
+            return AnalyseProfile(success=False, errors=[error])
+
+        # Push user_id and github_token to SQS queue
+        try:
+            response = push_profile_analysis_to_sqs_queue(
+                user.id, github_token
+            )
+            logger.info(
+                "Message ID %s for profile analysis pushed to SQS queue"
+                % response["MessageId"]
+            )
+        except botocore.exceptions.ClientError:
+            logger.error("AWS SQS Error", exc_info=True)
+            return AnalyseProfile(success=False, errors=["server error"])
+
+        # Save the analysis log to database
+        # This will be used to determine how many analyses the user has run
+        create_analysis = create_model_object(ProfileAnalysis, user=user)
+        if not create_analysis.success:
+            logger.critical(
+                "Unable to create ProfileAnalysis object, errors:\n%(errors)s"
+                % {"errors": "\n".join(create_analysis.errors)}
+            )
+            # Sending success=True message because the process was queued on
+            # SQS. However, the analysis isn't counted in the user's quota
+            # since the ProfileAnalysis wasn't saved to database
+            return AnalyseProfile(success=True)
+
+        # Successfully completed
+        return AnalyseProfile(success=True)
+
+
 class Mutation(graphene.ObjectType):
     delete_github_profile = DeleteGithubProfile.Field()
     create_notification = CreateNotification.Field()
     mark_notification_as_read = MarkNotificationAsRead.Field()
+    analyse_profile = AnalyseProfile.Field()
