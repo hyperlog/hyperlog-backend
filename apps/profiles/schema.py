@@ -66,6 +66,10 @@ class Query(graphene.ObjectType):
     )
     notifications_count = graphene.Int(conditions=graphene.JSONString())
 
+    profile_analyses_used = graphene.Int(
+        description="The number of profile analyses used by the user"
+    )
+
     def resolve_notifications(self, info, **kwargs):
         conditions = kwargs.get("conditions")
         if conditions:
@@ -100,6 +104,10 @@ class Query(graphene.ObjectType):
 
     def resolve_profile_emails(self, info, **kwargs):
         return EmailAddress.objects.all()
+
+    @login_required
+    def resolve_profile_analyses_used(self, info, **kwargs):
+        return len(info.context.user.profile_analyses.all())
 
 
 class DeleteGithubProfile(graphene.Mutation):
@@ -181,6 +189,8 @@ class MarkNotificationAsRead(graphene.Mutation):
 
 
 class AnalyseProfile(graphene.Mutation):
+    """Mutation to run profile analysis for user"""
+
     success = graphene.Boolean()
     errors = graphene.List(graphene.String)
 
