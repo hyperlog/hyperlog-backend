@@ -163,6 +163,7 @@ class ProfileAnalysis(models.Model):
     )
     deleted_user = models.ForeignKey(
         DeletedUser,
+        blank=True,
         null=True,
         on_delete=models.SET_NULL,
         related_name="profile_analyses",
