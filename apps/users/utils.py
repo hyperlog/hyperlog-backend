@@ -1,10 +1,17 @@
+import logging
+import botocore
+
 from itertools import chain
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 
-from apps.base.utils import CreateModelResult, get_error_messages
+from apps.base.utils import CreateModelResult, get_error_messages, get_aws_client
 from apps.users.models import DeletedUser, User
+
+DYNAMODB_PROFILES_TABLE_NAME = "profiles"
+
+logger = logging.getLogger(__name__)
 
 
 def to_dict(instance):
@@ -41,6 +48,11 @@ def create_user(username, email, password, **kwargs) -> CreateModelResult:
     except ValidationError as e:
         return CreateModelResult(success=False, errors=get_error_messages(e))
 
+    try:
+        dynamodb_create_profile(user)
+    except botocore.exceptions.ClientError:
+        logger.error("DynamoDB error encountered", exc_info=True)
+
     user.save()
     return CreateModelResult(success=True, object=user)
 
@@ -70,3 +82,23 @@ def delete_user(user: User) -> DeletedUser:
     user.delete()
 
     return deleted_user
+
+
+def dynamodb_create_profile(user):
+    """Uses DynamoDB PutItem to create/update a profile on DynamoDB"""
+    client = get_aws_client("dynamodb")
+
+    return client.put_item(
+        TableName=DYNAMODB_PROFILES_TABLE_NAME,
+        Item={
+            "user_id": {
+                "S": str(user.id)
+            },
+            "status": {
+                "S": "idle"
+            },
+            "turn": {
+                "N": 0
+            }
+        }
+    )
