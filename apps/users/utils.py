@@ -92,11 +92,19 @@ def dynamodb_create_profile(user):
     """Uses DynamoDB PutItem to create/update a profile on DynamoDB"""
     client = get_aws_client("dynamodb")
 
+    # fmt: off
     return client.put_item(
         TableName=DYNAMODB_PROFILES_TABLE_NAME,
         Item={
-            "user_id": {"S": str(user.id)},
-            "status": {"S": "idle"},
-            "turn": {"N": 0},
+            "user_id": {
+                "S": str(user.id)
+            },
+            "status": {
+                "S": "idle"
+            },
+            "turn": {
+                "N": 0
+            },
         },
     )
+    # fmt: on
