@@ -185,3 +185,10 @@ AWS_ACCOUNT_ID = str(env("AWS_ACCOUNT_ID", default="x"))  # Ensure str type
 AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="x")
 AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="x")
 AWS_DEFAULT_REGION = env("AWS_DEFAULT_REGION", default="us-east-1")
+
+AWS_DYNAMODB_PROFILES_TABLE = env(
+    "AWS_DYNAMODB_PROFILES_TABLE", default="profiles"
+)
+AWS_PROFILE_ANALYSIS_QUEUE = env(
+    "AWS_PROFILE_ANALYSIS_QUEUE", default="profile_analysis_queue"
+)

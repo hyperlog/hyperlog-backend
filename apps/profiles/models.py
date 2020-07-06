@@ -2,10 +2,13 @@ import logging
 
 import botocore
 
+from django.contrib.auth import get_user_model
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 from apps.profiles.utils import dynamodb_create_or_update_profile
+from apps.users.models import DeletedUser
 
 logger = logging.getLogger(__name__)
 
@@ -148,3 +151,25 @@ class Notification(models.Model):
             "username": self.user.username,
             "heading": self.heading,
         }
+
+
+class ProfileAnalysis(models.Model):
+    # null = True so that when the record of analysis stays even if the user is deleted  # noqa
+    user = models.ForeignKey(
+        get_user_model(),
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="profile_analyses",
+    )
+    deleted_user = models.ForeignKey(
+        DeletedUser,
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="profile_analyses",
+    )
+    start_timestamp = models.DateTimeField(auto_now_add=timezone.now)
+
+    @property
+    def has_valid_user(self):
+        return True if self.user or self.deleted_user else False
