@@ -35,7 +35,7 @@ def render_github_oauth_fail(request, **kwargs):
 
 
 def dynamodb_create_or_update_profile(profile):
-    """Uses DynamoDB PutItem to create/update a profile on DynamoDB"""
+    """Uses DynamoDB UpdateItem to create/update a profile on DynamoDB"""
     client = get_aws_client("dynamodb")
 
     key = {"user_id": {"S": str(profile.user.id)}}
