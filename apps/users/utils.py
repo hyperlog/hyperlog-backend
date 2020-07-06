@@ -96,6 +96,9 @@ def dynamodb_create_profile(user):
             },
             "status": {
                 "S": "idle"
+            },
+            "turn": {
+                "N": 0
             }
         }
     )
