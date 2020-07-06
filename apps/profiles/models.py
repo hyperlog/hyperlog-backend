@@ -1,13 +1,11 @@
 import logging
 
-import botocore
-
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
-from apps.profiles.utils import dynamodb_create_or_update_profile
 from apps.users.models import DeletedUser
 
 logger = logging.getLogger(__name__)
@@ -40,6 +38,23 @@ class BaseProfileModel(models.Model):
         # There should be only one profile with the same provider and uid pair
         unique_together = ["_provider", "provider_uid"]
 
+    def clean(self):
+        if self.user.profiles.filter(_provider=self._provider).exists():
+            raise ValidationError(
+                "Your Hyperlog account already has a connected %s account"
+                % self._provider
+            )
+        super().clean()
+
+    def unique_error_message(self, model_class, unique_check):
+        if unique_check == ("_provider", "provider_uid"):
+            return (
+                "This %s account is already associated with a user"
+                % self._provider
+            )
+        else:
+            return super().unique_error_message(model_class, unique_check)
+
     @property
     def provider(self):
         return self._provider
@@ -60,24 +75,17 @@ def get_profile_manager_by_provider(provider: str) -> models.Manager:
     Usage:
     class GithubProfile(BaseProfileModel):
         objects = get_profile_manager_by_provider('github')()
-
-        class Meta:
-            proxy = True
     """
 
     class ProfileManager(models.Manager):
-        def get_queryset(self):
-            """
-            Overrides the models.Manager's get_queryset method to only give
-            results for the given provider
-            """
-            return super().get_queryset().filter(_provider=provider)
-
         def create(self, **kwargs):
             """
             Overrides the default create method
+
+            Note: Only use this method in testing or when validation has
+            already been done
             """
-            if kwargs.get("_provider"):
+            if kwargs.get("_provider") and kwargs.get("_provider") != provider:
                 raise Exception(
                     "_provider field can only be specified in model definition"
                 )
@@ -86,11 +94,6 @@ def get_profile_manager_by_provider(provider: str) -> models.Manager:
             kwargs["provider_uid"] = str(kwargs["provider_uid"])
             profile_obj = super().create(**kwargs)
 
-            try:
-                dynamodb_create_or_update_profile(profile_obj)
-            except botocore.exceptions.ClientError:
-                logger.error("DynamoDB error encountered", exc_info=True)
-
             return profile_obj
 
     return ProfileManager
@@ -98,6 +101,14 @@ def get_profile_manager_by_provider(provider: str) -> models.Manager:
 
 class GithubProfile(BaseProfileModel):
     objects = get_profile_manager_by_provider("github")()
+
+    def clean_fields(self, exclude=None):
+        if self._provider and self._provider != "github":
+            raise ValidationError(
+                "The social provider cannot be defined externally"
+            )
+        self._provider = "github"
+        super().clean_fields(exclude=exclude)
 
 
 class GitlabProfile(BaseProfileModel):

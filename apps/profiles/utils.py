@@ -1,13 +1,24 @@
+import logging
+
+import botocore
+
 from django.conf import settings
 from django.shortcuts import render
 from django.utils import timezone
 
-from apps.base.utils import get_aws_client, get_sqs_queue_by_name
+from apps.base.utils import (
+    create_model_object,
+    get_aws_client,
+    get_sqs_queue_by_name,
+)
 
 DYNAMODB_PROFILES_TABLE_NAME = settings.AWS_DYNAMODB_PROFILES_TABLE
 PROFILE_ANALYSIS_QUEUE_NAME = settings.AWS_PROFILE_ANALYSIS_QUEUE
 GITHUB_SUCCESS_TEMPLATE_PATH = "profiles/github_success.html"
 GITHUB_FAIL_TEMPLATE_PATH = "profiles/github_fail.html"
+
+
+logger = logging.getLogger(__name__)
 
 
 def render_github_oauth_success(request, **kwargs):
@@ -81,3 +92,18 @@ def push_profile_analysis_to_sqs_queue(user_id, github_token):
             },
         },
     )
+
+
+def create_profile_object(profile_model, **kwargs):
+    """
+    Creates profile with create_model_object and uploads the token to dynamodb
+    """
+    profile_creation = create_model_object(profile_model, **kwargs)
+
+    if profile_creation.success:
+        try:
+            dynamodb_create_or_update_profile(profile_creation.object)
+        except botocore.exceptions.ClientError:
+            logger.error("DynamoDB exception encountered", exc_info=True)
+
+    return profile_creation

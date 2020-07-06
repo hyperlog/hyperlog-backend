@@ -16,6 +16,7 @@ from graphql_jwt.utils import get_payload as jwt_get_payload
 from apps.base.utils import create_model_object
 from apps.profiles.models import GithubProfile, EmailAddress
 from apps.profiles.utils import (
+    create_profile_object,
     render_github_oauth_fail,
     render_github_oauth_success,
 )
@@ -115,17 +116,26 @@ def oauth_github_callback(request):
         g = Github(access_token)
         github_details = g.get_user()
 
-        profile = GithubProfile.objects.create(
+        profile_creation = create_profile_object(
+            GithubProfile,
             access_token=access_token,
             username=github_details.login,
             provider_uid=github_details.id,
             user=request.user,
         )
 
-        for email_dict in github_details.get_emails():
-            # TODO: Add primary and verified parameters
-            create_model_object(
-                EmailAddress, email=email_dict.get("email"), profile=profile
+        if profile_creation.success:
+            profile = profile_creation.object
+            for email_dict in github_details.get_emails():
+                # TODO: Add primary and verified parameters
+                create_model_object(
+                    EmailAddress,
+                    email=email_dict.get("email"),
+                    profile=profile,
+                )
+        else:
+            return render_github_oauth_fail(
+                request, errors=profile_creation.errors
             )
 
     except Exception:
