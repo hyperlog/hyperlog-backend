@@ -103,7 +103,7 @@ def dynamodb_create_profile(user):
                 "S": "idle"
             },
             "turn": {
-                "N": 0
+                "N": "0"
             },
         },
     )
