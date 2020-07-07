@@ -6,7 +6,11 @@ from itertools import chain
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 
-from apps.base.utils import CreateModelResult, get_error_messages, get_aws_client
+from apps.base.utils import (
+    CreateModelResult,
+    get_error_messages,
+    get_aws_client,
+)
 from apps.users.models import DeletedUser, User
 
 DYNAMODB_PROFILES_TABLE_NAME = "profiles"
@@ -88,6 +92,7 @@ def dynamodb_create_profile(user):
     """Uses DynamoDB PutItem to create/update a profile on DynamoDB"""
     client = get_aws_client("dynamodb")
 
+    # fmt: off
     return client.put_item(
         TableName=DYNAMODB_PROFILES_TABLE_NAME,
         Item={
@@ -99,6 +104,7 @@ def dynamodb_create_profile(user):
             },
             "turn": {
                 "N": 0
-            }
-        }
+            },
+        },
     )
+    # fmt: on
