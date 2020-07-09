@@ -1,17 +1,21 @@
+from datetime import timedelta
 import logging
 
 import graphene
 import graphql_jwt
 from graphene_django import DjangoObjectType
 from graphql_jwt.decorators import login_required
+from graphql_jwt.utils import jwt_encode, jwt_decode
+from jwt.exceptions import InvalidTokenError
 
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.hashers import check_password
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db.utils import Error as DjangoDBError
+from django.utils import timezone
 
-from apps.base.utils import get_error_messages
+from apps.base.utils import get_error_messages, get_model_object
 from apps.users.models import User
 from apps.users.utils import (
     delete_user as delete_user_util,
@@ -223,6 +227,66 @@ class UpdatePassword(graphene.Mutation):
             return UpdatePassword(success=False, errors=errors)
 
 
+class GetTokenForResetPassword(graphene.Mutation):
+    success = graphene.Boolean()
+    errors = graphene.List(graphene.String)
+    token = graphene.String()
+
+    class Arguments:
+        username = graphene.String(required=True)
+
+    def mutate(self, info, username):
+        if get_user_model().objects.filter(username=username).exists():
+            # Encode with expiry 10 minutes after creation
+            encoded = jwt_encode(
+                {
+                    "username": username,
+                    "exp": timezone.now() + timedelta(seconds=600),
+                }
+            )
+            return GetTokenForResetPassword(success=True, token=encoded)
+
+        return GetTokenForResetPassword(
+            success=False, errors=["Invalid username"]
+        )
+
+
+class ResetForgottenPassword(graphene.Mutation):
+    success = graphene.Boolean()
+    errors = graphene.List(graphene.String)
+
+    class Arguments:
+        token = graphene.String(required=True)
+        password = graphene.String(required=True)
+
+    def mutate(self, info, token, password):
+        try:
+            decoded = jwt_decode(token)
+        except InvalidTokenError:
+            return ResetForgottenPassword(
+                success=False, errors=["Invalid Token"]
+            )
+
+        username, exp = decoded["username"], decoded["exp"]
+
+        if timezone.now().timestamp() > exp:
+            return ResetForgottenPassword(
+                success=False, errors=["Token expired"]
+            )
+
+        get_user = get_model_object(get_user_model(), username=username)
+
+        if get_user.success:
+            user = get_user.object
+            user.set_password(password)
+            user.save()
+            return ResetForgottenPassword(success=True)
+        else:
+            return ResetForgottenPassword(
+                success=get_user.success, errors=get_user.errors
+            )
+
+
 class DeleteUser(graphene.Mutation):
     """Mutation to delete a user"""
 
@@ -252,3 +316,5 @@ class Mutation(object):
     update_password = UpdatePassword.Field()
     is_username_valid = IsUsernameValid.Field()
     is_email_valid = IsEmailValid.Field()
+    reset_forgotten_password = ResetForgottenPassword.Field()
+    get_token_for_reset_password = GetTokenForResetPassword.Field()
