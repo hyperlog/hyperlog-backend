@@ -19,7 +19,8 @@ from apps.base.utils import (
     get_model_object,
 )
 from apps.profiles.utils import (
-    dynamodb_get_analysis_status_by_user_id,
+    dynamodb_convert_boto_dict_to_python_dict,
+    dynamodb_get_profile,
     push_profile_analysis_to_sqs_queue,
 )
 
@@ -198,15 +199,6 @@ class AnalyseProfile(graphene.Mutation):
     def mutate(self, info):
         user = info.context.user
 
-        # Check if user has finished their quota
-        if (
-            hasattr(user, "profile_analyses")
-            and len(user.profile_analyses.all())
-            >= MAX_PROFILE_ANALYSES_PER_USER
-        ):
-            error = "You've completed the limit of 5 runs of profile analysis"
-            return AnalyseProfile(success=False, errors=[error])
-
         # Get the github token if a github account is associated with user
         if hasattr(user, "profiles"):
             try:
@@ -220,13 +212,21 @@ class AnalyseProfile(graphene.Mutation):
 
         github_token = gh_profile.access_token
 
-        # Check if an analyse task is already running
-        try:
-            status = dynamodb_get_analysis_status_by_user_id(user.id)
-        except Exception as e:
-            logger.exception(e)
-            return AnalyseProfile(success=False, errors=["server error"])
+        # Get data from DynamoDB
+        user_profile = dynamodb_convert_boto_dict_to_python_dict(
+            dynamodb_get_profile(user.id)
+        )
 
+        # Check if user has finished their quota
+        if user_profile["turn"] >= MAX_PROFILE_ANALYSES_PER_USER:
+            error = (
+                "You've completed the limit of %i runs of profile analysis"
+                % MAX_PROFILE_ANALYSES_PER_USER
+            )
+            return AnalyseProfile(success=False, errors=[error])
+
+        # Check if an analyse task is already running
+        status = user_profile["status"]
         if status == "in_progress":
             error = "You already have an analysis running. Please wait"
             return AnalyseProfile(success=False, errors=[error])
@@ -245,16 +245,13 @@ class AnalyseProfile(graphene.Mutation):
             return AnalyseProfile(success=False, errors=["server error"])
 
         # Save the analysis log to database
-        # This will be used to determine how many analyses the user has run
         create_analysis = create_model_object(ProfileAnalysis, user=user)
         if not create_analysis.success:
             logger.critical(
                 "Unable to create ProfileAnalysis object, errors:\n%(errors)s"
                 % {"errors": "\n".join(create_analysis.errors)}
             )
-            # Sending success=True message because the process was queued on
-            # SQS. However, the analysis isn't counted in the user's quota
-            # since the ProfileAnalysis wasn't saved to database
+            # Sending success=True message because the process was queued
             return AnalyseProfile(success=True)
 
         # Successfully completed
