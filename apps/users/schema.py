@@ -1,11 +1,11 @@
-from datetime import timedelta
+# from datetime import timedelta
 import logging
 
 import graphene
 import graphql_jwt
 from graphene_django import DjangoObjectType
 from graphql_jwt.decorators import login_required
-from graphql_jwt.utils import jwt_encode, jwt_decode
+from graphql_jwt.utils import jwt_decode  # , jwt_encode
 from jwt.exceptions import InvalidTokenError
 
 from django.contrib.auth import get_user_model, logout
@@ -227,28 +227,28 @@ class UpdatePassword(graphene.Mutation):
             return UpdatePassword(success=False, errors=errors)
 
 
-class GetTokenForResetPassword(graphene.Mutation):
-    success = graphene.Boolean()
-    errors = graphene.List(graphene.String)
-    token = graphene.String()
-
-    class Arguments:
-        username = graphene.String(required=True)
-
-    def mutate(self, info, username):
-        if get_user_model().objects.filter(username=username).exists():
-            # Encode with expiry 10 minutes after creation
-            encoded = jwt_encode(
-                {
-                    "username": username,
-                    "exp": timezone.now() + timedelta(seconds=600),
-                }
-            )
-            return GetTokenForResetPassword(success=True, token=encoded)
-
-        return GetTokenForResetPassword(
-            success=False, errors=["Invalid username"]
-        )
+# class GetTokenForResetPassword(graphene.Mutation):
+#     success = graphene.Boolean()
+#     errors = graphene.List(graphene.String)
+#     token = graphene.String()
+#
+#     class Arguments:
+#         username = graphene.String(required=True)
+#
+#     def mutate(self, info, username):
+#         if get_user_model().objects.filter(username=username).exists():
+#             # Encode with expiry 10 minutes after creation
+#             encoded = jwt_encode(
+#                 {
+#                     "username": username,
+#                     "exp": timezone.now() + timedelta(seconds=600),
+#                 }
+#             )
+#             return GetTokenForResetPassword(success=True, token=encoded)
+#
+#         return GetTokenForResetPassword(
+#             success=False, errors=["Invalid username"]
+#         )
 
 
 class ResetForgottenPassword(graphene.Mutation):
@@ -317,4 +317,4 @@ class Mutation(object):
     is_username_valid = IsUsernameValid.Field()
     is_email_valid = IsEmailValid.Field()
     reset_forgotten_password = ResetForgottenPassword.Field()
-    get_token_for_reset_password = GetTokenForResetPassword.Field()
+    # get_token_for_reset_password = GetTokenForResetPassword.Field()
