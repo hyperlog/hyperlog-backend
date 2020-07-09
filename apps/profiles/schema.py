@@ -108,7 +108,10 @@ class Query(graphene.ObjectType):
 
     @login_required
     def resolve_profile_analyses_used(self, info, **kwargs):
-        return len(info.context.user.profile_analyses.all())
+        user_profile = dynamodb_convert_boto_dict_to_python_dict(
+            dynamodb_get_profile(info.context.user.id)
+        )
+        return user_profile["turn"]
 
 
 class DeleteGithubProfile(graphene.Mutation):
