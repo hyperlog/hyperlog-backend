@@ -63,16 +63,70 @@ def dynamodb_create_or_update_profile(profile):
     )
 
 
-def dynamodb_get_analysis_status_by_user_id(user_id):
+def dynamodb_get_profile(user_id):
     """
-    Uses the DynamoDB GetItem API to get the analysis status and then checks
-    if the status is in progress
+    Uses the DynamoDB GetItem API to get the profile data as per the "profiles"
+    table in raw format as returned by boto3
     """
     client = get_aws_client("dynamodb")
 
     key = {"user_id": {"S": str(user_id)}}
     response = client.get_item(TableName=DYNAMODB_PROFILES_TABLE_NAME, Key=key)
-    return response["Item"]["status"]["S"]
+    return response["Item"]
+
+
+def string_to_int_or_float(s):
+    try:
+        return int(s)
+    except ValueError:
+        return float(s)
+
+
+def dynamodb_process_boto_val(boto_val):
+    if "S" in boto_val:
+        return str(boto_val["S"])
+
+    elif "N" in boto_val:
+        return string_to_int_or_float(boto_val["N"])
+
+    elif "B" in boto_val:
+        return bytes(boto_val["B"])
+
+    elif "BOOL" in boto_val:
+        return bool(boto_val["BOOL"])
+
+    elif "NULL" in boto_val:
+        return None
+
+    elif "SS" in boto_val:
+        return [str(val) for val in boto_val["SS"]]
+
+    elif "NS" in boto_val:
+        return [string_to_int_or_float(val) for val in boto_val["NS"]]
+
+    elif "BS" in boto_val:
+        return [bytes(val) for val in boto_val["BS"]]
+
+    elif "M" in boto_val:
+        return dynamodb_convert_boto_dict_to_python_dict(boto_val["M"])
+
+    elif "L" in boto_val:
+        return [dynamodb_process_boto_val(val) for val in boto_val["L"]]
+
+    else:
+        raise Exception("Unexpected data format: %s" % str(boto_val))
+
+
+def dynamodb_convert_boto_dict_to_python_dict(boto_dict):
+    """
+    Converts a boto3 representation for a DynamoDB item into a python object
+    """
+    python_dict = {}
+
+    for (key, boto_val) in boto_dict.items():
+        python_dict[key] = dynamodb_process_boto_val(boto_val)
+
+    return python_dict
 
 
 def push_profile_analysis_to_sqs_queue(user_id, github_token):
