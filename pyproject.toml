@@ -18,17 +18,16 @@ django-cors-headers = "^3.3.0"
 boto3 = "^1.13.24"
 channels = "^2.4.0"
 daphne = "^2.5.0"
+sentry-sdk = "^0.16.1"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.8.2"
 black = "^19.10b0"
 pre-commit = "^2.5.1"
 
-[build-system]
-requires = ["poetry>=0.12"]
-build-backend = "poetry.masonry.api"
-
-
 [tool.black]
 line-length = 79
 target-version = ['py37']
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
