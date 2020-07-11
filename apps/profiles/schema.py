@@ -13,11 +13,7 @@ from apps.profiles.models import (
     Notification,
     ProfileAnalysis,
 )
-from apps.base.utils import (
-    create_model_object,
-    get_error_messages,
-    get_model_object,
-)
+from apps.base.utils import create_model_object, get_model_object
 from apps.profiles.utils import (
     dynamodb_convert_boto_dict_to_python_dict,
     dynamodb_get_profile,
@@ -128,12 +124,8 @@ class DeleteGithubProfile(graphene.Mutation):
             errors = ["GitHub account is not associated."]
             return DeleteGithubProfile(success=False, errors=errors)
 
-        try:
-            profile.delete()
-            return DeleteGithubProfile(success=True)
-        except Exception:
-            logger.error("Error in DeleteGithubProfile mutation")
-            return DeleteGithubProfile(success=False, errors=["server error"])
+        profile.delete()
+        return DeleteGithubProfile(success=True)
 
 
 class CreateNotification(graphene.Mutation):
@@ -142,35 +134,29 @@ class CreateNotification(graphene.Mutation):
     notification = graphene.Field(NotificationType)
 
     class Arguments:
-        user_id = graphene.Int(required=True)
+        user_id = graphene.UUID(required=True)
         heading = graphene.String(required=True)
         sub = graphene.String(required=True)
         read = graphene.Boolean()
         priority = graphene.Int()
 
     def mutate(self, info, user_id, **kwargs):
-        try:
-            # try to get the user
-            user_result = get_model_object(get_user_model(), id=user_id)
+        # try to get the user
+        user_result = get_model_object(get_user_model(), id=user_id)
 
-            if user_result.success:
-                user = user_result.object
-            else:
-                # User could not be found
-                return CreateNotification(
-                    success=False, errors=user_result.errors
-                )
+        if user_result.success:
+            user = user_result.object
+        else:
+            # User could not be found
+            return CreateNotification(success=False, errors=user_result.errors)
 
-            # validate and create notification object
-            result = create_model_object(Notification, user=user, **kwargs)
-            return CreateNotification(
-                success=result.success,
-                notification=result.object,
-                errors=result.errors if result.success is False else None,
-            )
-        except Exception as e:
-            logger.exception(e)
-            return CreateNotification(success=False, errors=["server error"])
+        # validate and create notification object
+        result = create_model_object(Notification, user=user, **kwargs)
+        return CreateNotification(
+            success=result.success,
+            notification=result.object,
+            errors=result.errors if result.success is False else None,
+        )
 
 
 class MarkNotificationAsRead(graphene.Mutation):
@@ -181,15 +167,18 @@ class MarkNotificationAsRead(graphene.Mutation):
         id = graphene.Int(required=True)
 
     def mutate(self, info, id):
-        try:
-            notification = get_model_object(Notification, id=id)
+        get_notification = get_model_object(Notification, id=id)
+
+        if get_notification.success:
+            notification = get_notification.object
             notification.read = True
             notification.save()
-        except Exception as e:
-            errors = get_error_messages(e)
-            return MarkNotificationAsRead(success=False, errors=errors)
-
-        return MarkNotificationAsRead(success=True)
+            return MarkNotificationAsRead(success=True)
+        else:
+            return MarkNotificationAsRead(
+                success=get_notification.success,
+                errors=get_notification.errors,
+            )
 
 
 class AnalyseProfile(graphene.Mutation):
