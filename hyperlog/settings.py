@@ -13,13 +13,10 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 import os
 
 import environ
+
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 
-sentry_sdk.init(
-    "https://70c4499546b84ccdb5954017d91bde23@o310860.ingest.sentry.io/1777522",  # noqa: E501
-    integrations=[DjangoIntegration()],
-)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -38,8 +35,14 @@ SECRET_KEY = env(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool("DEBUG", default=True)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
+sentry_sdk.init(
+    "https://70c4499546b84ccdb5954017d91bde23@o310860.ingest.sentry.io/1777522"
+    if not DEBUG
+    else None,
+    integrations=[DjangoIntegration()],
+)
 
 # Application definition
 
