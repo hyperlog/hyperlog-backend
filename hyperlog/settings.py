@@ -39,7 +39,7 @@ ALLOWED_HOSTS = ["*"]
 
 sentry_sdk.init(
     "https://70c4499546b84ccdb5954017d91bde23@o310860.ingest.sentry.io/1777522"
-    if not DEBUG
+    if DEBUG is False
     else None,
     integrations=[DjangoIntegration()],
 )
