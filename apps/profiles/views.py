@@ -102,44 +102,37 @@ def oauth_github_callback(request):
             request, errors=["No code found in parameters"]
         )
 
-    try:
-        code = request.GET.get("code")
-        oauth = OAuth2Session(
-            client_id=GITHUB_CLIENT_ID,
-            state=request.session.get("oauth_github_state"),
-        )
-        access_token = oauth.fetch_token(
-            GITHUB_TOKEN_URL, client_secret=GITHUB_CLIENT_SECRET, code=code
-        ).get("access_token")
+    code = request.GET.get("code")
+    oauth = OAuth2Session(
+        client_id=GITHUB_CLIENT_ID,
+        state=request.session.get("oauth_github_state"),
+    )
+    access_token = oauth.fetch_token(
+        GITHUB_TOKEN_URL, client_secret=GITHUB_CLIENT_SECRET, code=code
+    ).get("access_token")
 
-        # Load interface to v3 API to grab uid, username and email
-        g = Github(access_token)
-        github_details = g.get_user()
+    # Load interface to v3 API to grab uid, username and email
+    g = Github(access_token)
+    github_details = g.get_user()
 
-        profile_creation = create_profile_object(
-            GithubProfile,
-            access_token=access_token,
-            username=github_details.login,
-            provider_uid=github_details.id,
-            user=request.user,
-        )
+    profile_creation = create_profile_object(
+        GithubProfile,
+        access_token=access_token,
+        username=github_details.login,
+        provider_uid=github_details.id,
+        user=request.user,
+    )
 
-        if profile_creation.success:
-            profile = profile_creation.object
-            for email_dict in github_details.get_emails():
-                # TODO: Add primary and verified parameters
-                create_model_object(
-                    EmailAddress,
-                    email=email_dict.get("email"),
-                    profile=profile,
-                )
-        else:
-            return render_github_oauth_fail(
-                request, errors=profile_creation.errors
+    if profile_creation.success:
+        profile = profile_creation.object
+        for email_dict in github_details.get_emails():
+            # TODO: Add primary and verified parameters
+            create_model_object(
+                EmailAddress, email=email_dict.get("email"), profile=profile,
             )
-
-    except Exception:
-        logger.error("Error while processing Github OAuth", exc_info=True)
-        return render_github_oauth_fail(request, errors=["server error"])
+    else:
+        return render_github_oauth_fail(
+            request, errors=profile_creation.errors
+        )
 
     return render_github_oauth_success(request)

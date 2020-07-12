@@ -192,10 +192,6 @@ class UpdateUser(graphene.Mutation):
         except DjangoDBError as e:
             errors = get_error_messages(e)
             return UpdateUser(success=False, errors=errors)
-        except Exception:
-            # Hide the error log from user here as it could be a bug
-            logger.error("Error in UpdateUser mutation", exc_info=True)
-            return UpdateUser(success=False, errors=["server error"])
 
 
 class UpdatePassword(graphene.Mutation):
@@ -211,13 +207,9 @@ class UpdatePassword(graphene.Mutation):
         user = info.context.user
         encoded = user.password
         if check_password(old, encoded):
-            try:
-                user.set_password(new)
-                user.save()
-                return UpdatePassword(success=True)
-            except Exception:
-                logger.error("Error in UpdatePassword mutation", exc_info=True)
-                return UpdatePassword(success=False, errors=["server error"])
+            user.set_password(new)
+            user.save()
+            return UpdatePassword(success=True)
         else:
             errors = ["Old password is incorrect"]
             return UpdatePassword(success=False, errors=errors)
@@ -233,12 +225,8 @@ class DeleteUser(graphene.Mutation):
     def mutate(self, info, **kwargs):
         user = info.context.user
 
-        try:
-            delete_user_util(user)
-            return DeleteUser(success=True)
-        except Exception:
-            logger.error("Error in DeleteUser mutation", exc_info=True)
-            return DeleteUser(success=False, errors=["server error"])
+        delete_user_util(user)
+        return DeleteUser(success=True)
 
 
 class Mutation(object):
