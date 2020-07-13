@@ -132,4 +132,4 @@ dmypy.json
 .vscode/
 
 # django static files - must be created with deployment scripts
-./staticfiles
+/staticfiles
