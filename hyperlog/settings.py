@@ -35,7 +35,11 @@ SECRET_KEY = env(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool("DEBUG", default=True)
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = (
+    ["134.209.152.73", "api.hyperlog.io", "localhost"]
+    if DEBUG is False
+    else ["*"]
+)
 
 sentry_sdk.init(
     "https://70c4499546b84ccdb5954017d91bde23@o310860.ingest.sentry.io/1777522"
@@ -162,6 +166,8 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+
 
 # GitHub OAuth
 
@@ -186,8 +192,6 @@ AUTHENTICATION_BACKENDS = [
     "graphql_jwt.backends.JSONWebTokenBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
-
-STATIC_URL = "/static/"
 
 # AWS
 

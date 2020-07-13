@@ -130,6 +130,3 @@ dmypy.json
 
 # editors
 .vscode/
-
-# Django migrations (Remove from here when pushing to production)
-migrations/
