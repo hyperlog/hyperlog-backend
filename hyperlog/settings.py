@@ -24,6 +24,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 env = environ.Env()
 env.read_env(os.path.join(BASE_DIR, ".env"))
 
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
@@ -41,16 +42,11 @@ ALLOWED_HOSTS = (
     else ["*"]
 )
 
-sentry_sdk.init(
-    "https://70c4499546b84ccdb5954017d91bde23@o310860.ingest.sentry.io/1777522"
-    if DEBUG is False
-    else None,
-    integrations=[DjangoIntegration()],
-)
 
 # Application definition
 
 INSTALLED_APPS = [
+    "whitenoise.runserver_nostatic",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -71,6 +67,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -193,6 +190,12 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
 ]
 
+
+# Whitenoise
+
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+
 # AWS
 
 AWS_ACCOUNT_ID = str(env("AWS_ACCOUNT_ID", default="x"))  # Ensure str type
@@ -205,4 +208,14 @@ AWS_DYNAMODB_PROFILES_TABLE = env(
 )
 AWS_PROFILE_ANALYSIS_QUEUE = env(
     "AWS_PROFILE_ANALYSIS_QUEUE", default="profile_analysis_queue"
+)
+
+
+# Sentry
+
+sentry_sdk.init(
+    "https://70c4499546b84ccdb5954017d91bde23@o310860.ingest.sentry.io/1777522"
+    if DEBUG is False
+    else None,
+    integrations=[DjangoIntegration()],
 )
