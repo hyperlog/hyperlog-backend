@@ -37,7 +37,7 @@ SECRET_KEY = env(
 DEBUG = env.bool("DEBUG", default=True)
 
 ALLOWED_HOSTS = (
-    ["134.209.152.73", "api.hyperlog.io", "localhost"]
+    ["134.209.152.73", "gateway.hyperlog.io", "localhost"]
     if DEBUG is False
     else ["*"]
 )
