@@ -82,6 +82,8 @@ CORS_ORIGIN_WHITELIST = [
     "https://localhost:3000",
     "http://127.0.0.1:3000",
     "https://127.0.0.1:3000",
+    "http://app.hyperlog.io",
+    "https://app.hyperlog.io",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
