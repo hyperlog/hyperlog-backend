@@ -83,6 +83,14 @@ class Register(graphene.Mutation):
         )
 
 
+class Login(graphql_jwt.JSONWebTokenMutation):
+    user = graphene.Field(UserType)
+
+    @classmethod
+    def resolve(cls, root, info, **kwargs):
+        return cls(user=info.context.user)
+
+
 class IsUsernameValid(graphene.Mutation):
     """Checks if a username is valid and can be registerd
 
@@ -230,10 +238,10 @@ class DeleteUser(graphene.Mutation):
 
 
 class Mutation(object):
-    login = graphql_jwt.ObtainJSONWebToken.Field()
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()
     register = Register.Field()
+    login = Login.Field()
     logout = Logout.Field()
     update_user = UpdateUser.Field()
     delete_user = DeleteUser.Field()
