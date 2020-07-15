@@ -39,7 +39,7 @@ class UserManager(BaseUserManager):
         is_staff = extra_fields.pop("is_staff", False)
         is_superuser = extra_fields.pop("is_superuser", False)
         return self._create_user(
-            email, password, is_staff, is_superuser, **extra_fields
+            username, email, password, is_staff, is_superuser, **extra_fields
         )
 
     def create_superuser(self, username, email, password, **extra_fields):

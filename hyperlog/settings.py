@@ -24,6 +24,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 env = environ.Env()
 env.read_env(os.path.join(BASE_DIR, ".env"))
 
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
@@ -35,18 +36,17 @@ SECRET_KEY = env(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool("DEBUG", default=True)
 
-ALLOWED_HOSTS = ["*"]
-
-sentry_sdk.init(
-    "https://70c4499546b84ccdb5954017d91bde23@o310860.ingest.sentry.io/1777522"
+ALLOWED_HOSTS = (
+    ["134.209.152.73", "gateway.hyperlog.io", "localhost"]
     if DEBUG is False
-    else None,
-    integrations=[DjangoIntegration()],
+    else ["*"]
 )
+
 
 # Application definition
 
 INSTALLED_APPS = [
+    "whitenoise.runserver_nostatic",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -67,6 +67,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -81,6 +82,8 @@ CORS_ORIGIN_WHITELIST = [
     "https://localhost:3000",
     "http://127.0.0.1:3000",
     "https://127.0.0.1:3000",
+    "http://app.hyperlog.io",
+    "https://app.hyperlog.io",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -162,6 +165,8 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+
 
 # GitHub OAuth
 
@@ -187,7 +192,11 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
 ]
 
-STATIC_URL = "/static/"
+
+# Whitenoise
+
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
 
 # AWS
 
@@ -201,4 +210,14 @@ AWS_DYNAMODB_PROFILES_TABLE = env(
 )
 AWS_PROFILE_ANALYSIS_QUEUE = env(
     "AWS_PROFILE_ANALYSIS_QUEUE", default="profile_analysis_queue"
+)
+
+
+# Sentry
+
+sentry_sdk.init(
+    "https://70c4499546b84ccdb5954017d91bde23@o310860.ingest.sentry.io/1777522"
+    if DEBUG is False
+    else None,
+    integrations=[DjangoIntegration()],
 )
