@@ -13,16 +13,19 @@ from apps.profiles.models import (
     Notification,
     ProfileAnalysis,
 )
-from apps.base.utils import create_model_object, get_model_object
+from apps.base.utils import (
+    create_model_object,
+    get_error_messages,
+    get_model_object,
+)
 from apps.profiles.utils import (
+    dynamodb_add_selected_repos_to_profile_analysis_table,
     dynamodb_convert_boto_dict_to_python_dict,
     dynamodb_get_profile,
     push_profile_analysis_to_sqs_queue,
 )
 
 logger = logging.getLogger(__name__)
-
-MAX_PROFILE_ANALYSES_PER_USER = 5
 
 
 class ProfileType(DjangoObjectType):
@@ -209,14 +212,6 @@ class AnalyseProfile(graphene.Mutation):
             dynamodb_get_profile(user.id)
         )
 
-        # Check if user has finished their quota
-        if user_profile["turn"] >= MAX_PROFILE_ANALYSES_PER_USER:
-            error = (
-                "You've completed the limit of %i runs of profile analysis"
-                % MAX_PROFILE_ANALYSES_PER_USER
-            )
-            return AnalyseProfile(success=False, errors=[error])
-
         # Check if an analyse task is already running
         status = user_profile["status"]
         if status == "in_progress":
@@ -250,8 +245,43 @@ class AnalyseProfile(graphene.Mutation):
         return AnalyseProfile(success=True)
 
 
+class SelectRepos(graphene.Mutation):
+    success = graphene.Boolean(required=True)
+    errors = graphene.List(graphene.String)
+
+    class Arguments:
+        repos = graphene.List(graphene.String)
+
+    @login_required
+    def mutate(self, info, repos):
+        user_id = info.context.user.id
+
+        try:
+            result = dynamodb_add_selected_repos_to_profile_analysis_table(
+                user_id, repos
+            )
+            logger.info(
+                f"Added selected repos to dynamodb for user: {user_id}, "
+                f"repos: {repos}\nResponse: {result}"
+            )
+            return SelectRepos(success=True)
+        except AssertionError as e:
+            return SelectRepos(success=False, errors=get_error_messages(e))
+        except botocore.exceptions.ClientError as e:
+            if (
+                e.response["Error"]["Code"]
+                == "ConditionalCheckFailedException"
+            ):
+                logger.exception("Failed conditional check")
+                return SelectRepos(success=False, errors=["Invalid request"])
+
+            logger.exception("Botocore error")
+            return SelectRepos(success=False, errors=["server error"])
+
+
 class Mutation(graphene.ObjectType):
     delete_github_profile = DeleteGithubProfile.Field()
     create_notification = CreateNotification.Field()
     mark_notification_as_read = MarkNotificationAsRead.Field()
     analyse_profile = AnalyseProfile.Field()
+    select_repos = SelectRepos.Field()

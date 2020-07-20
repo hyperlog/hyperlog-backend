@@ -208,6 +208,10 @@ AWS_DEFAULT_REGION = env("AWS_DEFAULT_REGION", default="us-east-1")
 AWS_DYNAMODB_PROFILES_TABLE = env(
     "AWS_DYNAMODB_PROFILES_TABLE", default="profiles"
 )
+AWS_DYNAMODB_PROFILE_ANALYSIS_TABLE = env(
+    "DDB_PROFILE_ANALYSIS_TABLE", default="profile-analysis-dev"
+)
+
 AWS_PROFILE_ANALYSIS_QUEUE = env(
     "AWS_PROFILE_ANALYSIS_QUEUE", default="profile_analysis_queue"
 )

@@ -13,7 +13,9 @@ from apps.base.utils import (
 )
 
 DYNAMODB_PROFILES_TABLE_NAME = settings.AWS_DYNAMODB_PROFILES_TABLE
+DYNAMODB_PROFILE_ANALYSIS_TABLE = settings.AWS_DYNAMODB_PROFILE_ANALYSIS_TABLE
 PROFILE_ANALYSIS_QUEUE_NAME = settings.AWS_PROFILE_ANALYSIS_QUEUE
+
 GITHUB_SUCCESS_TEMPLATE_PATH = "profiles/github_success.html"
 GITHUB_FAIL_TEMPLATE_PATH = "profiles/github_fail.html"
 
@@ -161,3 +163,34 @@ def create_profile_object(profile_model, **kwargs):
             logger.error("DynamoDB exception encountered", exc_info=True)
 
     return profile_creation
+
+
+def dynamodb_add_selected_repos_to_profile_analysis_table(
+    user_id, repos_list, max_repos=5
+):
+    """
+    Updates the profile analysis table with selectedRepos field of type String
+    Set ({"SS": ["repo1.nameWithOwner", "repo2.nameWithOwner", ...]})
+
+    Uses DynamoDB UpdateItem API
+    """
+    # input checks
+    assert all(
+        [isinstance(repo_name, str) for repo_name in repos_list]
+    ), "Invalid input"
+    assert len(repos_list) > 0 and len(repos_list) <= max_repos, (
+        "You must choose at least 1 and at most %i repos" % max_repos
+    )
+
+    # Add repos list as String Set
+    client = get_aws_client("dynamodb")
+    key = {"uuid": {"S": str(user_id)}}
+    update_expression = "SET selectedRepos = :reposSet"
+    expression_attribute_values = {":reposSet": {"SS": repos_list}}
+
+    return client.update_item(
+        TableName=DYNAMODB_PROFILE_ANALYSIS_TABLE,
+        Key=key,
+        UpdateExpression=update_expression,
+        ExpressionAttributeValues=expression_attribute_values,
+    )
