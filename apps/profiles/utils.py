@@ -186,7 +186,7 @@ def dynamodb_add_selected_repos_to_profile_analysis_table(
     client = get_aws_client("dynamodb")
     key = {"uuid": {"S": str(user_id)}}
     update_expression = "SET selectedRepos = :reposSet"
-    expression_attribute_values = {"reposSet": {"SS": repos_list}}
+    expression_attribute_values = {":reposSet": {"SS": repos_list}}
 
     return client.update_item(
         TableName=DYNAMODB_PROFILE_ANALYSIS_TABLE,
