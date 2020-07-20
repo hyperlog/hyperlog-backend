@@ -212,8 +212,8 @@ AWS_DYNAMODB_PROFILE_ANALYSIS_TABLE = env(
     "DDB_PROFILE_ANALYSIS_TABLE", default="profile-analysis-dev"
 )
 
-AWS_PROFILE_ANALYSIS_QUEUE = env(
-    "AWS_PROFILE_ANALYSIS_QUEUE", default="profile_analysis_queue"
+AWS_SNS_PROFILE_ANALYSIS_TOPIC = env(
+    "AWS_SNS_PROFILE_ANALYSIS_TOPIC", default="github_tokens"
 )
 
 

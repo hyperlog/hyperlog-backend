@@ -22,7 +22,7 @@ from apps.profiles.utils import (
     dynamodb_add_selected_repos_to_profile_analysis_table,
     dynamodb_convert_boto_dict_to_python_dict,
     dynamodb_get_profile,
-    push_profile_analysis_to_sqs_queue,
+    publish_profile_analysis_trigger_to_sns,
 )
 
 logger = logging.getLogger(__name__)
@@ -218,17 +218,17 @@ class AnalyseProfile(graphene.Mutation):
             error = "You already have an analysis running. Please wait"
             return AnalyseProfile(success=False, errors=[error])
 
-        # Push user_id and github_token to SQS queue
+        # Publish user id and github token to SNS topic
         try:
-            response = push_profile_analysis_to_sqs_queue(
+            response = publish_profile_analysis_trigger_to_sns(
                 user.id, github_token
             )
             logger.info(
-                "Message ID %s for profile analysis pushed to SQS queue"
+                "Message ID %s for profile analysis published to SNS topic"
                 % response["MessageId"]
             )
         except botocore.exceptions.ClientError:
-            logger.error("AWS SQS Error", exc_info=True)
+            logger.exception("AWS Boto error")
             return AnalyseProfile(success=False, errors=["server error"])
 
         # Save the analysis log to database
@@ -238,7 +238,7 @@ class AnalyseProfile(graphene.Mutation):
                 "Unable to create ProfileAnalysis object, errors:\n%(errors)s"
                 % {"errors": "\n".join(create_analysis.errors)}
             )
-            # Sending success=True message because the process was queued
+            # Sending success=True because the analysis trigger was published
             return AnalyseProfile(success=True)
 
         # Successfully completed

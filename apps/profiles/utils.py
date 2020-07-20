@@ -9,12 +9,12 @@ from django.utils import timezone
 from apps.base.utils import (
     create_model_object,
     get_aws_client,
-    get_sqs_queue_by_name,
+    get_or_create_sns_topic,
 )
 
 DYNAMODB_PROFILES_TABLE_NAME = settings.AWS_DYNAMODB_PROFILES_TABLE
 DYNAMODB_PROFILE_ANALYSIS_TABLE = settings.AWS_DYNAMODB_PROFILE_ANALYSIS_TABLE
-PROFILE_ANALYSIS_QUEUE_NAME = settings.AWS_PROFILE_ANALYSIS_QUEUE
+SNS_PROFILE_ANALYSIS_TOPIC = settings.AWS_SNS_PROFILE_ANALYSIS_TOPIC
 
 GITHUB_SUCCESS_TEMPLATE_PATH = "profiles/github_success.html"
 GITHUB_FAIL_TEMPLATE_PATH = "profiles/github_fail.html"
@@ -131,15 +131,14 @@ def dynamodb_convert_boto_dict_to_python_dict(boto_dict):
     return python_dict
 
 
-def push_profile_analysis_to_sqs_queue(user_id, github_token):
+def publish_profile_analysis_trigger_to_sns(user_id, github_token):
     """
-    Push a task for profile analysis onto the SQS profile analysis queue
+    Publish required details for profile analysis task (user_id, github_token)
+    to the SNS Topic for profile analysis
     """
-    queue = get_sqs_queue_by_name(PROFILE_ANALYSIS_QUEUE_NAME)
-
-    # The MessageBody argument is required. Use it for timestamp
-    return queue.send_message(
-        MessageBody=str(timezone.now().timestamp()),
+    topic = get_or_create_sns_topic(SNS_PROFILE_ANALYSIS_TOPIC)
+    topic.publish(
+        Message=str(timezone.now().timestamp()),
         MessageAttributes={
             "user_id": {"DataType": "String", "StringValue": str(user_id)},
             "github_token": {

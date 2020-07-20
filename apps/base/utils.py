@@ -151,57 +151,19 @@ def get_sns_topic_arn_by_name(topic):
     return AWS_SNS_TOPIC_ARN_TEMPLATE.format(topic=topic)
 
 
-def get_or_create_sns_topic(client, topic):
+def get_or_create_sns_topic(topic_name):
     """
-    Creates a new SNS topic and returns the resulting topic ARN.
+    Creates a new SNS topic and returns a SNS.Topic object.
     This is idempotent, topic will only be created if it does not exist.
 
     Parameters:
-    * client {Boto3 SNS client}: The SNS client which will execute the request
-    (returned by `get_aws_client("sns")`)
-    * topic {str}: The name of the topic
+    * topic_name {str}: The name of the topic
 
     Returns:
-    * topic_arn {str}: The ARN of the topic
+    * {SNS.Topic}: A Topic object of the SNS service resource
     """
-    try:
-        topic = client.create_topic(Name=topic)
-    except Exception as e:
-        logger.exception(e)
-        raise
-
-    return topic["TopicArn"]
-
-
-def publish_message_to_sns_topic(client, topic, message, subject=None):
-    """
-    Publishes a message to SNS. Sends the same message to all subscribers of
-    the topic.
-
-    Parameters:
-    * client {Boto3 SNS Client}: The SNS client to use (returned by
-    `get_aws_client("sns")`)
-    * topic {str}: The name of the topic to publish on
-    * message {str}: The message to be published. If the payload is of type
-    Dict, it should first be converted to JSON before passing here.
-    * subject {Optional[str]}: The subject for the message. Will appear as the
-    subject of email notifications. Will be accessible via the JSON response
-    on other subscriptions.
-
-    Returns:
-    * message_id {str}: The `MessageId` as returned by AWS.
-    """
-    try:
-        response = client.publish(
-            TopicArn=get_sns_topic_arn_by_name(topic),
-            Message=message,
-            Subject=subject,
-        )
-    except Exception as e:
-        logger.exception(e)
-        raise
-
-    return response["MessageId"]
+    sns = boto3.resource("sns")
+    return sns.create_topic(Name=topic_name)
 
 
 # SQS
