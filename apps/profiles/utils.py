@@ -9,7 +9,7 @@ from django.utils import timezone
 from apps.base.utils import (
     create_model_object,
     get_aws_client,
-    get_or_create_sns_topic,
+    get_sns_topic_by_name,
 )
 
 DYNAMODB_PROFILES_TABLE_NAME = settings.AWS_DYNAMODB_PROFILES_TABLE
@@ -136,8 +136,8 @@ def publish_profile_analysis_trigger_to_sns(user_id, github_token):
     Publish required details for profile analysis task (user_id, github_token)
     to the SNS Topic for profile analysis
     """
-    topic = get_or_create_sns_topic(SNS_PROFILE_ANALYSIS_TOPIC)
-    topic.publish(
+    topic = get_sns_topic_by_name(SNS_PROFILE_ANALYSIS_TOPIC)
+    return topic.publish(
         Message=str(timezone.now().timestamp()),
         MessageAttributes={
             "user_id": {"DataType": "String", "StringValue": str(user_id)},

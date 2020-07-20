@@ -166,6 +166,21 @@ def get_or_create_sns_topic(topic_name):
     return sns.create_topic(Name=topic_name)
 
 
+def get_sns_topic_by_name(topic_name):
+    """
+    Gets a SNS.Topic resource by the given name.
+
+    Parameters:
+    * topic_name {str}: The name of the topic
+
+    Returns:
+    * {SNS.Topic}: A SNS.Topic resource for the given SNS topic
+    """
+    sns = boto3.resource("sns")
+    topic_arn = get_sns_topic_arn_by_name(topic_name)
+    return sns.Topic(topic_arn)
+
+
 # SQS
 
 
