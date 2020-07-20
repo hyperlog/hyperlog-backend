@@ -1,7 +1,6 @@
 import logging
 
 import botocore
-from boto3.dynamodb.conditions import Attr
 
 from django.conf import settings
 from django.shortcuts import render
@@ -174,10 +173,6 @@ def dynamodb_add_selected_repos_to_profile_analysis_table(
     Set ({"SS": ["repo1.nameWithOwner", "repo2.nameWithOwner", ...]})
 
     Uses DynamoDB UpdateItem API
-
-    Conditions while making update:
-    1. The `repos` attribute must exist
-    2. The `selectedRepos` attribute must not already exist
     """
     # input checks
     assert all(
@@ -198,6 +193,4 @@ def dynamodb_add_selected_repos_to_profile_analysis_table(
         Key=key,
         UpdateExpression=update_expression,
         ExpressionAttributeValues=expression_attribute_values,
-        ConditionExpression=Attr("repos").exists()
-        & Attr("selectedRepos").not_exists(),
     )
