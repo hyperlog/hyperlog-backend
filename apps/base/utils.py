@@ -3,18 +3,10 @@ import typing
 
 import boto3
 
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 
 logger = logging.getLogger(__name__)
-
-AWS_ACCOUNT_ID = settings.AWS_ACCOUNT_ID
-AWS_DEFAULT_REGION = settings.AWS_DEFAULT_REGION
-AWS_SNS_TOPIC_ARN_TEMPLATE = "arn:aws:sns:%s:%s:{topic}" % (
-    AWS_DEFAULT_REGION,
-    AWS_ACCOUNT_ID,
-)
 
 
 class CreateModelResult(typing.NamedTuple):
@@ -146,12 +138,7 @@ def get_aws_client(resource, **kwargs):
 # SNS specific utils
 
 
-def get_sns_topic_arn_by_name(topic):
-    """Gets the ARN (Amazon Resource Name) for the given SNS topic"""
-    return AWS_SNS_TOPIC_ARN_TEMPLATE.format(topic=topic)
-
-
-def get_or_create_sns_topic(topic_name):
+def get_or_create_sns_topic_by_topic_name(topic_name):
     """
     Creates a new SNS topic and returns a SNS.Topic object.
     This is idempotent, topic will only be created if it does not exist.
@@ -164,21 +151,6 @@ def get_or_create_sns_topic(topic_name):
     """
     sns = boto3.resource("sns")
     return sns.create_topic(Name=topic_name)
-
-
-def get_sns_topic_by_name(topic_name):
-    """
-    Gets a SNS.Topic resource by the given name.
-
-    Parameters:
-    * topic_name {str}: The name of the topic
-
-    Returns:
-    * {SNS.Topic}: A SNS.Topic resource for the given SNS topic
-    """
-    sns = boto3.resource("sns")
-    topic_arn = get_sns_topic_arn_by_name(topic_name)
-    return sns.Topic(topic_arn)
 
 
 # SQS

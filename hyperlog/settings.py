@@ -212,8 +212,9 @@ AWS_DYNAMODB_PROFILE_ANALYSIS_TABLE = env(
     "DDB_PROFILE_ANALYSIS_TABLE", default="profile-analysis-dev"
 )
 
-AWS_SNS_PROFILE_ANALYSIS_TOPIC = env(
-    "AWS_SNS_PROFILE_ANALYSIS_TOPIC", default="github_tokens"
+AWS_SNS_PROFILE_ANALYSIS_TOPIC = (
+    env("AWS_SNS_PROFILE_ANALYSIS_TOPIC", default="RepoAnalysis")
+    + f"-{'dev' if DEBUG else 'prod'}"
 )
 
 
