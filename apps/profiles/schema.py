@@ -250,7 +250,7 @@ class SelectRepos(graphene.Mutation):
     errors = graphene.List(graphene.String)
 
     class Arguments:
-        repo_names = graphene.List(graphene.String)
+        repos = graphene.List(graphene.String)
 
     @login_required
     def mutate(self, info, repos):
