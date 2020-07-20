@@ -27,8 +27,6 @@ from apps.profiles.utils import (
 
 logger = logging.getLogger(__name__)
 
-MAX_PROFILE_ANALYSES_PER_USER = 5
-
 
 class ProfileType(DjangoObjectType):
     class Meta:
@@ -213,14 +211,6 @@ class AnalyseProfile(graphene.Mutation):
         user_profile = dynamodb_convert_boto_dict_to_python_dict(
             dynamodb_get_profile(user.id)
         )
-
-        # Check if user has finished their quota
-        if user_profile["turn"] >= MAX_PROFILE_ANALYSES_PER_USER:
-            error = (
-                "You've completed the limit of %i runs of profile analysis"
-                % MAX_PROFILE_ANALYSES_PER_USER
-            )
-            return AnalyseProfile(success=False, errors=[error])
 
         # Check if an analyse task is already running
         status = user_profile["status"]

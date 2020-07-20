@@ -175,10 +175,9 @@ def dynamodb_add_selected_repos_to_profile_analysis_table(
 
     Uses DynamoDB UpdateItem API
 
-    Conditions used while making update:
-    1. The `selectedRepos` attribute must not
-    already exist
-    2. The `repos` attribute must exist
+    Conditions while making update:
+    1. The `repos` attribute must exist
+    2. The `selectedRepos` attribute must not already exist
     """
     # input checks
     assert all(
@@ -200,12 +199,5 @@ def dynamodb_add_selected_repos_to_profile_analysis_table(
         UpdateExpression=update_expression,
         ExpressionAttributeValues=expression_attribute_values,
         ConditionExpression=Attr("repos").exists()
-        & eval(
-            " & ".join(
-                [
-                    f"Attr('repos').contains({repo_name})"
-                    for repo_name in repos_list
-                ]
-            )
-        ),
+        & Attr("selectedRepos").not_exists(),
     )
