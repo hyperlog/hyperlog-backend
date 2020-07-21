@@ -117,8 +117,8 @@ def dynamodb_create_profile(user):
 
 def send_welcome_email(user):
     """Send a Welcome email to the given user"""
-    sender = WELCOME_FROM_EMAIL
-    receivers = [user.email]
+    from_email = WELCOME_FROM_EMAIL
+    to = [user.email]
     subject = "Welcome to Hyperlog.io!"
     text = """
     Hey, %(username)s!
@@ -130,6 +130,6 @@ def send_welcome_email(user):
 
     # Log the error if it occurs
     try:
-        send_mail(subject, text, sender, receivers, fail_silently=True)
+        send_mail(subject, text, from_email, to, fail_silently=False)
     except smtplib.SMTPException:
-        logger.exception(f"Failed to send Welcome Email to {receivers}")
+        logger.exception(f"Failed to send Welcome Email to {to}")

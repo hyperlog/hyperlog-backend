@@ -219,6 +219,7 @@ AWS_SNS_PROFILE_ANALYSIS_TOPIC = (
 )
 
 AWS_SES_WELCOME_FROM_EMAIL = "Hyperlog.io <welcome@hyperlog.io>"
+AWS_SES_REGION_ENDPOINT = f"email.{AWS_DEFAULT_REGION}.amazonaws.com"
 
 
 # Sentry
