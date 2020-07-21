@@ -193,3 +193,45 @@ def dynamodb_add_selected_repos_to_profile_analysis_table(
         UpdateExpression=update_expression,
         ExpressionAttributeValues=expression_attribute_values,
     )
+
+
+def trigger_analysis(user, github_token):
+    """
+    The core logic for Analyse mutation, performs checks and triggers the
+    analysis mutation.
+
+    Returns a dictionary with keys:
+    1. success: bool
+    2. errors: Optional[List[str]] - additional errors data in case success
+    is False
+
+    Does not create the ProfileAnalysis database object, that will have to be
+    done manually from the mutations in which this is used
+    """
+
+    # Get data from DynamoDB
+    user_profile = dynamodb_convert_boto_dict_to_python_dict(
+        dynamodb_get_profile(user.id)
+    )
+
+    # Check if an analyse task is already running
+    status = user_profile["status"]
+    if status == "in_progress":
+        error = "You already have an analysis running. Please wait"
+        return {"success": False, "errors": [error]}
+
+    # Publish user id and github token to SNS topic
+    try:
+        response = publish_profile_analysis_trigger_to_sns(
+            user.id, github_token
+        )
+        logger.info(
+            "Message ID %s for profile analysis published to SNS topic"
+            % response["MessageId"]
+        )
+    except botocore.exceptions.ClientError:
+        logger.exception("AWS Boto error")
+        return {"success": False, "errors": ["server error"]}
+
+    # successfully triggered
+    return {"success": True}
