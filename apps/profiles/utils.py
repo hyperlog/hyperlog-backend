@@ -9,12 +9,12 @@ from django.utils import timezone
 from apps.base.utils import (
     create_model_object,
     get_aws_client,
-    get_sqs_queue_by_name,
+    get_or_create_sns_topic_by_topic_name,
 )
 
 DYNAMODB_PROFILES_TABLE_NAME = settings.AWS_DYNAMODB_PROFILES_TABLE
 DYNAMODB_PROFILE_ANALYSIS_TABLE = settings.AWS_DYNAMODB_PROFILE_ANALYSIS_TABLE
-PROFILE_ANALYSIS_QUEUE_NAME = settings.AWS_PROFILE_ANALYSIS_QUEUE
+SNS_PROFILE_ANALYSIS_TOPIC = settings.AWS_SNS_PROFILE_ANALYSIS_TOPIC
 
 GITHUB_SUCCESS_TEMPLATE_PATH = "profiles/github_success.html"
 GITHUB_FAIL_TEMPLATE_PATH = "profiles/github_fail.html"
@@ -131,15 +131,14 @@ def dynamodb_convert_boto_dict_to_python_dict(boto_dict):
     return python_dict
 
 
-def push_profile_analysis_to_sqs_queue(user_id, github_token):
+def publish_profile_analysis_trigger_to_sns(user_id, github_token):
     """
-    Push a task for profile analysis onto the SQS profile analysis queue
+    Publish required details for profile analysis task (user_id, github_token)
+    to the SNS Topic for profile analysis
     """
-    queue = get_sqs_queue_by_name(PROFILE_ANALYSIS_QUEUE_NAME)
-
-    # The MessageBody argument is required. Use it for timestamp
-    return queue.send_message(
-        MessageBody=str(timezone.now().timestamp()),
+    topic = get_or_create_sns_topic_by_topic_name(SNS_PROFILE_ANALYSIS_TOPIC)
+    return topic.publish(
+        Message=str(timezone.now().timestamp()),
         MessageAttributes={
             "user_id": {"DataType": "String", "StringValue": str(user_id)},
             "github_token": {
@@ -194,3 +193,45 @@ def dynamodb_add_selected_repos_to_profile_analysis_table(
         UpdateExpression=update_expression,
         ExpressionAttributeValues=expression_attribute_values,
     )
+
+
+def trigger_analysis(user, github_token):
+    """
+    The core logic for Analyse mutation, performs checks and triggers the
+    analysis mutation.
+
+    Returns a dictionary with keys:
+    1. success: bool
+    2. errors: Optional[List[str]] - additional errors data in case success
+    is False
+
+    Does not create the ProfileAnalysis database object, that will have to be
+    done manually from the mutations in which this is used
+    """
+
+    # Get data from DynamoDB
+    user_profile = dynamodb_convert_boto_dict_to_python_dict(
+        dynamodb_get_profile(user.id)
+    )
+
+    # Check if an analyse task is already running
+    status = user_profile["status"]
+    if status == "in_progress":
+        error = "You already have an analysis running. Please wait"
+        return {"success": False, "errors": [error]}
+
+    # Publish user id and github token to SNS topic
+    try:
+        response = publish_profile_analysis_trigger_to_sns(
+            user.id, github_token
+        )
+        logger.info(
+            "Message ID %s for profile analysis published to SNS topic"
+            % response["MessageId"]
+        )
+    except botocore.exceptions.ClientError:
+        logger.exception("AWS Boto error")
+        return {"success": False, "errors": ["server error"]}
+
+    # successfully triggered
+    return {"success": True}

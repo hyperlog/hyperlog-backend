@@ -13,6 +13,7 @@ from apps.profiles.models import (
     Notification,
     ProfileAnalysis,
 )
+from apps.base.schema import GenericResultMutation
 from apps.base.utils import (
     create_model_object,
     get_error_messages,
@@ -22,7 +23,7 @@ from apps.profiles.utils import (
     dynamodb_add_selected_repos_to_profile_analysis_table,
     dynamodb_convert_boto_dict_to_python_dict,
     dynamodb_get_profile,
-    push_profile_analysis_to_sqs_queue,
+    trigger_analysis,
 )
 
 logger = logging.getLogger(__name__)
@@ -184,87 +185,26 @@ class MarkNotificationAsRead(graphene.Mutation):
             )
 
 
-class AnalyseProfile(graphene.Mutation):
-    """Mutation to run profile analysis for user"""
-
-    success = graphene.Boolean()
-    errors = graphene.List(graphene.String)
-
-    @login_required
-    def mutate(self, info):
-        user = info.context.user
-
-        # Get the github token if a github account is associated with user
-        if hasattr(user, "profiles"):
-            try:
-                gh_profile = user.profiles.get(_provider="github")
-            except BaseProfileModel.DoesNotExist:
-                error = "No github account is associated with the user"
-                return AnalyseProfile(success=False, errors=[error])
-        else:
-            error = "No github account is associated with the user"
-            return AnalyseProfile(success=False, errors=[error])
-
-        github_token = gh_profile.access_token
-
-        # Get data from DynamoDB
-        user_profile = dynamodb_convert_boto_dict_to_python_dict(
-            dynamodb_get_profile(user.id)
-        )
-
-        # Check if an analyse task is already running
-        status = user_profile["status"]
-        if status == "in_progress":
-            error = "You already have an analysis running. Please wait"
-            return AnalyseProfile(success=False, errors=[error])
-
-        # Push user_id and github_token to SQS queue
-        try:
-            response = push_profile_analysis_to_sqs_queue(
-                user.id, github_token
-            )
-            logger.info(
-                "Message ID %s for profile analysis pushed to SQS queue"
-                % response["MessageId"]
-            )
-        except botocore.exceptions.ClientError:
-            logger.error("AWS SQS Error", exc_info=True)
-            return AnalyseProfile(success=False, errors=["server error"])
-
-        # Save the analysis log to database
-        create_analysis = create_model_object(ProfileAnalysis, user=user)
-        if not create_analysis.success:
-            logger.critical(
-                "Unable to create ProfileAnalysis object, errors:\n%(errors)s"
-                % {"errors": "\n".join(create_analysis.errors)}
-            )
-            # Sending success=True message because the process was queued
-            return AnalyseProfile(success=True)
-
-        # Successfully completed
-        return AnalyseProfile(success=True)
-
-
-class SelectRepos(graphene.Mutation):
-    success = graphene.Boolean(required=True)
-    errors = graphene.List(graphene.String)
+class SelectRepos(GenericResultMutation):
+    """Mutation to select repos and trigger analysis"""
 
     class Arguments:
-        repos = graphene.List(graphene.String)
+        repos = graphene.NonNull(
+            graphene.List(graphene.NonNull(graphene.String))
+        )
 
     @login_required
     def mutate(self, info, repos):
-        user_id = info.context.user.id
+        user = info.context.user
 
         try:
             result = dynamodb_add_selected_repos_to_profile_analysis_table(
-                user_id, repos
+                user.id, repos
             )
             logger.info(
-                f"Added selected repos to dynamodb for user: {user_id}, "
+                f"Added selected repos to dynamodb for user: {user.id}, "
                 f"repos: {repos}\nResponse: {result}"
             )
-            return SelectRepos(success=True)
         except AssertionError as e:
             return SelectRepos(success=False, errors=get_error_messages(e))
         except botocore.exceptions.ClientError as e:
@@ -278,10 +218,35 @@ class SelectRepos(graphene.Mutation):
             logger.exception("Botocore error")
             return SelectRepos(success=False, errors=["server error"])
 
+        # Get the github token if a github account is associated with user
+        if hasattr(user, "profiles"):
+            try:
+                gh_profile = user.profiles.get(_provider="github")
+            except BaseProfileModel.DoesNotExist:
+                error = "No github account is associated with the user"
+                return SelectRepos(success=False, errors=[error])
+        else:
+            error = "No github account is associated with the user"
+            return SelectRepos(success=False, errors=[error])
+
+        github_token = gh_profile.access_token
+
+        analysis_result = trigger_analysis(user, github_token)
+
+        if analysis_result["success"]:
+            # Save the analysis log to database
+            save_analysis = create_model_object(ProfileAnalysis, user=user)
+            if not save_analysis.success:
+                logger.critical(
+                    "Unable to save ProfileAnalysis to db, errors:\n%(errors)s"
+                    % {"errors": "\n".join(save_analysis.errors)}
+                )
+
+        return SelectRepos(**analysis_result)
+
 
 class Mutation(graphene.ObjectType):
     delete_github_profile = DeleteGithubProfile.Field()
     create_notification = CreateNotification.Field()
     mark_notification_as_read = MarkNotificationAsRead.Field()
-    analyse_profile = AnalyseProfile.Field()
     select_repos = SelectRepos.Field()
