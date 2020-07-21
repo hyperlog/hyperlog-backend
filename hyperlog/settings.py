@@ -191,6 +191,7 @@ AUTHENTICATION_BACKENDS = [
     "graphql_jwt.backends.JSONWebTokenBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
+EMAIL_BACKEND = "django_ses.SESBackend"
 
 
 # Whitenoise
@@ -216,6 +217,9 @@ AWS_SNS_PROFILE_ANALYSIS_TOPIC = (
     env("AWS_SNS_PROFILE_ANALYSIS_TOPIC", default="RepoAnalysis")
     + f"-{'dev' if DEBUG else 'prod'}"
 )
+
+AWS_SES_WELCOME_FROM_EMAIL = "Hyperlog.io <welcome@hyperlog.io>"
+AWS_SES_REGION_ENDPOINT = f"email.{AWS_DEFAULT_REGION}.amazonaws.com"
 
 
 # Sentry
