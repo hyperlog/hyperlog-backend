@@ -189,7 +189,9 @@ class SelectRepos(GenericResultMutation):
     """Mutation to select repos and trigger analysis"""
 
     class Arguments:
-        repos = graphene.List(graphene.String(required=True))
+        repos = graphene.NonNull(
+            graphene.List(graphene.NonNull(graphene.String))
+        )
 
     @login_required
     def mutate(self, info, repos):
