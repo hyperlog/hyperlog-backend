@@ -1,10 +1,13 @@
 import logging
-import botocore
-
+import smtplib
 from itertools import chain
 
+import botocore
+
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
 
 from apps.base.utils import (
     CreateModelResult,
@@ -14,6 +17,7 @@ from apps.base.utils import (
 from apps.users.models import DeletedUser, User
 
 DYNAMODB_PROFILES_TABLE_NAME = "profiles"
+WELCOME_FROM_EMAIL = settings.AWS_SES_WELCOME_FROM_EMAIL
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +51,8 @@ def create_user(username, email, password, **kwargs) -> CreateModelResult:
     user.set_password(password)
 
     try:
-        # Run all validations
-        user.full_clean()
+        user.full_clean()  # validate before saving
+        user.save()
     except ValidationError as e:
         return CreateModelResult(success=False, errors=get_error_messages(e))
 
@@ -57,7 +61,8 @@ def create_user(username, email, password, **kwargs) -> CreateModelResult:
     except botocore.exceptions.ClientError:
         logger.error("DynamoDB error encountered", exc_info=True)
 
-    user.save()
+    send_welcome_email(user)
+
     return CreateModelResult(success=True, object=user)
 
 
@@ -108,3 +113,23 @@ def dynamodb_create_profile(user):
         },
     )
     # fmt: on
+
+
+def send_welcome_email(user):
+    """Send a Welcome email to the given user"""
+    sender = WELCOME_FROM_EMAIL
+    receivers = [user.email]
+    subject = "Welcome to Hyperlog.io!"
+    text = """
+    Hey, %(username)s!
+
+    Welcome to Hyperlog.io
+    """ % {
+        "username": user.username
+    }
+
+    # Log the error if it occurs
+    try:
+        send_mail(subject, text, sender, receivers, fail_silently=True)
+    except smtplib.SMTPException:
+        logger.exception(f"Failed to send Welcome Email to {receivers}")
