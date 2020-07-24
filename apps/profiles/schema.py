@@ -55,13 +55,8 @@ class NotificationType(DjangoObjectType):
 
 
 class Query(graphene.ObjectType):
-    profiles = graphene.List(ProfileType, provider=graphene.String())
     profile = graphene.Field(ProfileType, id=graphene.Int(required=True))
-    profile_emails = graphene.List(EmailAddressType)
 
-    notifications = graphene.List(
-        NotificationType, conditions=graphene.JSONString()
-    )
     notification = graphene.Field(
         NotificationType, id=graphene.Int(required=True)
     )
@@ -70,13 +65,6 @@ class Query(graphene.ObjectType):
     profile_analyses_used = graphene.Int(
         description="The number of profile analyses used by the user"
     )
-
-    def resolve_notifications(self, info, **kwargs):
-        conditions = kwargs.get("conditions")
-        if conditions:
-            return Notification.objects.filter(**conditions)
-        else:
-            return Notification.objects.all()
 
     def resolve_notification(self, info, **kwargs):
         return Notification.objects.get(id=kwargs.get("id"))
@@ -88,23 +76,9 @@ class Query(graphene.ObjectType):
         else:
             return Notification.objects.count()
 
-    def resolve_profiles(self, info, **kwargs):
-        """
-        Returns all profiles with given provider or simply all profiles if it
-        is not mentioned
-        """
-        if kwargs.get("provider"):
-            return BaseProfileModel.objects.filter(
-                _provider=kwargs.get("provider")
-            )
-        return BaseProfileModel.objects.all()
-
     @staff_member_required
     def resolve_profile(self, info, **kwargs):
         return BaseProfileModel.objects.get(id=kwargs.get("id"))
-
-    def resolve_profile_emails(self, info, **kwargs):
-        return EmailAddress.objects.all()
 
     @login_required
     def resolve_profile_analyses_used(self, info, **kwargs):
