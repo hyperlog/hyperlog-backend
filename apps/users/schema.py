@@ -41,16 +41,11 @@ class UserType(DjangoObjectType):
 
 class Query(graphene.ObjectType):
     user = graphene.Field(UserType, id=graphene.String(required=True))
-    users = graphene.List(UserType)
     this_user = graphene.Field(UserType)
 
     @staticmethod
     def resolve_user(cls, info, **kwargs):
         return User.objects.get(id=kwargs.get("id"))
-
-    @staticmethod
-    def resolve_users(cls, info, **kwargs):
-        return User.objects.all()
 
     @staticmethod
     @login_required
