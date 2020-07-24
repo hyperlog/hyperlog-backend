@@ -12,8 +12,8 @@ from apps.base.utils import (
     get_or_create_sns_topic_by_topic_name,
 )
 
-DYNAMODB_PROFILES_TABLE_NAME = settings.AWS_DYNAMODB_PROFILES_TABLE
-DYNAMODB_PROFILE_ANALYSIS_TABLE = settings.AWS_DYNAMODB_PROFILE_ANALYSIS_TABLE
+DDB_PROFILES_TABLE = settings.AWS_DDB_PROFILES_TABLE
+DDB_PROFILE_ANALYSIS_TABLE = settings.AWS_DDB_PROFILE_ANALYSIS_TABLE
 SNS_PROFILE_ANALYSIS_TOPIC = settings.AWS_SNS_PROFILE_ANALYSIS_TOPIC
 
 GITHUB_SUCCESS_TEMPLATE_PATH = "profiles/github_success.html"
@@ -57,7 +57,7 @@ def dynamodb_create_or_update_profile(profile):
     update_expression = "SET #AT = :t"
 
     return client.update_item(
-        TableName=DYNAMODB_PROFILES_TABLE_NAME,
+        TableName=DDB_PROFILES_TABLE,
         Key=key,
         UpdateExpression=update_expression,
         ExpressionAttributeNames=expression_attribute_names,
@@ -73,7 +73,7 @@ def dynamodb_get_profile(user_id):
     client = get_aws_client("dynamodb")
 
     key = {"user_id": {"S": str(user_id)}}
-    response = client.get_item(TableName=DYNAMODB_PROFILES_TABLE_NAME, Key=key)
+    response = client.get_item(TableName=DDB_PROFILES_TABLE, Key=key)
     return response["Item"]
 
 
@@ -188,7 +188,7 @@ def dynamodb_add_selected_repos_to_profile_analysis_table(
     expression_attribute_values = {":reposSet": {"SS": repos_list}}
 
     return client.update_item(
-        TableName=DYNAMODB_PROFILE_ANALYSIS_TABLE,
+        TableName=DDB_PROFILE_ANALYSIS_TABLE,
         Key=key,
         UpdateExpression=update_expression,
         ExpressionAttributeValues=expression_attribute_values,
