@@ -205,16 +205,15 @@ AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="x")
 AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="x")
 AWS_DEFAULT_REGION = env("AWS_DEFAULT_REGION", default="us-east-1")
 
-AWS_DYNAMODB_PROFILES_TABLE = env(
-    "AWS_DYNAMODB_PROFILES_TABLE", default="profiles"
-)
-AWS_DYNAMODB_PROFILE_ANALYSIS_TABLE = env(
-    "DDB_PROFILE_ANALYSIS_TABLE", default="profile-analysis-dev"
+AWS_DDB_PROFILES_TABLE = env("AWS_DDB_PROFILES_TABLE", default="profiles")
+AWS_DDB_PROFILE_ANALYSIS_TABLE = (
+    env("AWS_DDB_PROFILE_ANALYSIS_TABLE", default="profile-analysis")
+    + f"-{'prod' if DEBUG is False else 'dev'}"
 )
 
 AWS_SNS_PROFILE_ANALYSIS_TOPIC = (
     env("AWS_SNS_PROFILE_ANALYSIS_TOPIC", default="RepoAnalysis")
-    + f"-{'dev' if DEBUG else 'prod'}"
+    + f"-{'prod' if DEBUG is False else 'dev'}"
 )
 
 

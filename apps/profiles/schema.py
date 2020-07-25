@@ -88,10 +88,7 @@ class Query(graphene.ObjectType):
         return user_profile["turn"]
 
 
-class DeleteGithubProfile(graphene.Mutation):
-    success = graphene.Boolean()
-    errors = graphene.List(graphene.String)
-
+class DeleteGithubProfile(GenericResultMutation):
     @login_required
     def mutate(self, info, **kwargs):
         user = info.context.user
@@ -106,9 +103,7 @@ class DeleteGithubProfile(graphene.Mutation):
         return DeleteGithubProfile(success=True)
 
 
-class CreateNotification(graphene.Mutation):
-    success = graphene.String()
-    errors = graphene.List(graphene.String)
+class CreateNotification(GenericResultMutation):
     notification = graphene.Field(NotificationType)
 
     class Arguments:
@@ -137,10 +132,7 @@ class CreateNotification(graphene.Mutation):
         )
 
 
-class MarkNotificationAsRead(graphene.Mutation):
-    success = graphene.Boolean()
-    errors = graphene.List(graphene.String)
-
+class MarkNotificationAsRead(GenericResultMutation):
     class Arguments:
         id = graphene.Int(required=True)
 

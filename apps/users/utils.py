@@ -3,6 +3,7 @@ import botocore
 
 from itertools import chain
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 
@@ -13,7 +14,7 @@ from apps.base.utils import (
 )
 from apps.users.models import DeletedUser, User
 
-DYNAMODB_PROFILES_TABLE_NAME = "profiles"
+DDB_PROFILES_TABLE = settings.AWS_DDB_PROFILES_TABLE
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +95,7 @@ def dynamodb_create_profile(user):
 
     # fmt: off
     return client.put_item(
-        TableName=DYNAMODB_PROFILES_TABLE_NAME,
+        TableName=DDB_PROFILES_TABLE,
         Item={
             "user_id": {
                 "S": str(user.id)
