@@ -11,6 +11,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db.utils import Error as DjangoDBError
 
+from apps.base.schema import GenericResultMutation
 from apps.base.utils import get_error_messages
 from apps.users.models import User
 from apps.users.utils import (
@@ -59,10 +60,7 @@ class Query(graphene.ObjectType):
             return info.context.user
 
 
-class Register(graphene.Mutation):
-    success = graphene.Boolean()
-    errors = graphene.List(graphene.String)
-
+class Register(GenericResultMutation):
     class Arguments:
         email = graphene.String(required=True)
         username = graphene.String(required=True)
@@ -91,14 +89,11 @@ class Login(graphql_jwt.JSONWebTokenMutation):
         return cls(user=info.context.user)
 
 
-class IsUsernameValid(graphene.Mutation):
+class IsUsernameValid(GenericResultMutation):
     """Checks if a username is valid and can be registerd
 
     Using the Mutation type so as to accommodate errors if any
     """
-
-    success = graphene.Boolean()
-    errors = graphene.List(graphene.String)
 
     class Arguments:
         username = graphene.String(required=True)
@@ -121,14 +116,11 @@ class IsUsernameValid(graphene.Mutation):
         return IsUsernameValid(success=True)
 
 
-class IsEmailValid(graphene.Mutation):
+class IsEmailValid(GenericResultMutation):
     """Checks if an email address is valid and can be registered
 
     Using the Mutation type so as to accommodate errors if any
     """
-
-    success = graphene.Boolean()
-    errors = graphene.List(graphene.String)
 
     class Arguments:
         email = graphene.String(required=True)
@@ -151,21 +143,16 @@ class IsEmailValid(graphene.Mutation):
         return IsEmailValid(success=True)
 
 
-class Logout(graphene.Mutation):
+class Logout(GenericResultMutation):
     """ Mutation to logout a user """
-
-    success = graphene.Boolean()
 
     def mutate(self, info):
         logout(info.context)
         return Logout(success=True)
 
 
-class UpdateUser(graphene.Mutation):
+class UpdateUser(GenericResultMutation):
     """Mutation to update user's profile details"""
-
-    success = graphene.Boolean()
-    errors = graphene.List(graphene.String)
 
     class Arguments:
         email = graphene.String()
@@ -202,10 +189,7 @@ class UpdateUser(graphene.Mutation):
             return UpdateUser(success=False, errors=errors)
 
 
-class UpdatePassword(graphene.Mutation):
-    success = graphene.Boolean()
-    errors = graphene.List(graphene.String)
-
+class UpdatePassword(GenericResultMutation):
     class Arguments:
         old = graphene.String(required=True)
         new = graphene.String(required=True)
@@ -223,11 +207,8 @@ class UpdatePassword(graphene.Mutation):
             return UpdatePassword(success=False, errors=errors)
 
 
-class DeleteUser(graphene.Mutation):
+class DeleteUser(GenericResultMutation):
     """Mutation to delete a user"""
-
-    success = graphene.Boolean()
-    errors = graphene.List(graphene.String)
 
     @login_required
     def mutate(self, info, **kwargs):
