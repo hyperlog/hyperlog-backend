@@ -55,7 +55,17 @@ class Query(graphene.ObjectType):
             return info.context.user
 
 
+class Login(graphql_jwt.JSONWebTokenMutation):
+    user = graphene.Field(UserType)
+
+    @classmethod
+    def resolve(cls, root, info, **kwargs):
+        return cls(user=info.context.user)
+
+
 class Register(GenericResultMutation):
+    login = graphene.Field(Login)
+
     class Arguments:
         email = graphene.String(required=True)
         username = graphene.String(required=True)
@@ -71,17 +81,18 @@ class Register(GenericResultMutation):
             first_name=first_name,
             last_name=last_name,
         )
-        return Register(
-            success=user_creation.success, errors=user_creation.errors
-        )
 
-
-class Login(graphql_jwt.JSONWebTokenMutation):
-    user = graphene.Field(UserType)
-
-    @classmethod
-    def resolve(cls, root, info, **kwargs):
-        return cls(user=info.context.user)
+        if user_creation.success is True:
+            return Register(
+                success=True,
+                login=Login.mutate(
+                    self, info, username=username, password=password
+                ),
+            )
+        else:
+            return Register(
+                success=user_creation.success, errors=user_creation.errors
+            )
 
 
 class IsUsernameValid(GenericResultMutation):
