@@ -1,6 +1,5 @@
 import logging
 import botocore
-
 from itertools import chain
 
 from django.conf import settings
