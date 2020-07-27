@@ -72,7 +72,6 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "apps.base.middleware.jwt_middleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -225,3 +224,7 @@ sentry_sdk.init(
     else None,
     integrations=[DjangoIntegration()],
 )
+
+
+# JWT
+JWT_CUSTOM_COOKIE_MIDDLEWARE_MAX_AGE = 30  # seconds

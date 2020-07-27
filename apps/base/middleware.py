@@ -1,33 +1,30 @@
-from django.contrib.auth import authenticate
-from django.http import JsonResponse
+from django.conf import settings
 from django.utils.cache import patch_vary_headers
 
-from graphql_jwt.exceptions import JSONWebTokenError
-from graphql_jwt.middleware import _authenticate
+from graphql_jwt.shortcuts import get_user_by_token
 
 
-# https://github.com/flavors/django-graphql-jwt/blob/v0.2.1/graphql_jwt/middleware.py
+JWT_COOKIE_MAX_AGE = settings.JWT_CUSTOM_COOKIE_MIDDLEWARE_MAX_AGE
 
 
-def jwt_middleware(get_response):
+def custom_jwt_cookie_middleware(get_response):
     def middleware(request):
-        # Before calling view
-        if _authenticate(request):
-            try:
-                user = authenticate(request=request)
-            except JSONWebTokenError as err:
-                return JsonResponse(
-                    {"errors": [{"message": str(err)}]}, status=401
-                )
+        if "JWT" in request.COOKIES:
+            # When JWT exists and is used to get the user
+            token = request.COOKIES.get("JWT")
+            user = get_user_by_token(token)
 
             if user is not None:
                 request.user = request._cached_user = user
 
-        # Calling view
         response = get_response(request)
 
-        # After calling view
-        patch_vary_headers(response, ("Authorization"))
+        if "JWT" not in request.COOKIES and hasattr(request, "jwt_token"):
+            # When a JWT needs to be set
+            token = request.jwt_token
+            response.set_cookie("JWT", token, max_age=JWT_COOKIE_MAX_AGE)
+
+        patch_vary_headers(response, ["Authorization"])
         return response
 
     return middleware
