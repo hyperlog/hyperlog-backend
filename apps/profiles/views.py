@@ -44,7 +44,7 @@ GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 @custom_jwt_cookie
 def connect_github(request):
 
-    if request.GET.get("token"):
+    if "token" in request.GET:
         token = request.GET.get("token")
 
         # Validate token and return appropriate error message
