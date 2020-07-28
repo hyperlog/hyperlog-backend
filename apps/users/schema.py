@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 class UserType(DjangoObjectType):
     class Meta:
         model = User
-        only_fields = [
+        fields = [
             "id",
             "username",
             "email",
@@ -55,13 +55,11 @@ class Query(graphene.ObjectType):
     user = graphene.Field(UserType, id=graphene.String(required=True))
     this_user = graphene.Field(UserType)
 
-    @staticmethod
-    def resolve_user(cls, info, **kwargs):
+    def resolve_user(self, info, **kwargs):
         return User.objects.get(id=kwargs.get("id"))
 
-    @staticmethod
     @login_required
-    def resolve_this_user(cls, info, **kwargs):
+    def resolve_this_user(self, info, **kwargs):
         if info.context.user.is_authenticated:
             return info.context.user
 
@@ -436,7 +434,7 @@ class GetLinkToCreatePassword(GenericResultMutation):
         return GetLinkToCreatePassword(success=True, url=reset_url)
 
 
-class Mutation(object):
+class Mutation(graphene.ObjectType):
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()
     register = Register.Field()
