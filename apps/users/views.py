@@ -10,8 +10,8 @@ from django.views.decorators.http import require_http_methods
 from apps.base.utils import get_model_object
 
 
-def render_reset_password_form(request):
-    return render(request, "users/reset_password_form.html")
+def render_reset_password_form(request, code):
+    return render(request, "users/reset_password_form.html", {"code": code})
 
 
 def render_reset_password_fail(request, errors):
@@ -30,15 +30,23 @@ def reset_password(request):
 
     if request.method == "GET":
         if "code" in request.GET:
-            encoded = request.GET.get("code")
+            code = request.GET.get("code")
             try:
-                decoded = jwt_decode(encoded)
+                decoded = jwt_decode(code)
             except InvalidTokenError:
                 return render_reset_password_fail(
                     request, errors=["Invalid code"]
                 )
 
-            return render_reset_password_form(request)
+            _, exp = decoded["username"], decoded["exp"]
+
+            if timezone.now().timestamp() > exp:
+                return render_reset_password_fail(
+                    request,
+                    errors=["Code expired. Please try with a newer code."],
+                )
+
+            return render_reset_password_form(request, code)
         else:
             return HttpResponseBadRequest()
 
@@ -59,7 +67,9 @@ def reset_password(request):
         username, exp = decoded["username"], decoded["exp"]
 
         if timezone.now().timestamp() > exp:
-            return render_reset_password_fail(request, errors=["Code expired"])
+            return render_reset_password_fail(
+                request, errors=["Code expired. Please try with a newer code."]
+            )
 
         get_user = get_model_object(get_user_model(), username=username)
 

@@ -1,4 +1,3 @@
-# from datetime import timedelta
 import logging
 
 import graphene
@@ -215,7 +214,7 @@ class UpdatePassword(GenericResultMutation):
             return UpdatePassword(success=False, errors=errors)
 
 
-class MailTokenForResetPassword(GenericResultMutation):
+class sendResetPasswordMail(GenericResultMutation):
     class Arguments:
         username = graphene.String(required=True)
 
@@ -225,12 +224,12 @@ class MailTokenForResetPassword(GenericResultMutation):
         try:
             user = UserModel.objects.get(username=username)
         except UserModel.DoesNotExist:
-            return MailTokenForResetPassword(
+            return sendResetPasswordMail(
                 success=False, errors=["Invalid username"]
             )
 
         send_reset_password_email(user)
-        return MailTokenForResetPassword(success=True)
+        return sendResetPasswordMail(success=True)
 
 
 class DeleteUser(GenericResultMutation):
@@ -255,4 +254,4 @@ class Mutation(object):
     update_password = UpdatePassword.Field()
     is_username_valid = IsUsernameValid.Field()
     is_email_valid = IsEmailValid.Field()
-    mail_token_for_reset_password = MailTokenForResetPassword.Field()
+    mail_token_for_reset_password = sendResetPasswordMail.Field()
