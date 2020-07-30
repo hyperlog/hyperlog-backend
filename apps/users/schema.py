@@ -254,4 +254,4 @@ class Mutation(object):
     update_password = UpdatePassword.Field()
     is_username_valid = IsUsernameValid.Field()
     is_email_valid = IsEmailValid.Field()
-    mail_token_for_reset_password = sendResetPasswordMail.Field()
+    send_reset_password_mail = sendResetPasswordMail.Field()
