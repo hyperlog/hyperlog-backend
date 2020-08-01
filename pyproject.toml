@@ -25,6 +25,7 @@ channels = "^2.4.0"
 daphne = "^2.5.0"
 sentry-sdk = "^0.16.1"
 whitenoise = {extras = ["brotli"], version = "^5.1.0"}
+django-ses = "^1.0.1"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.8.2"

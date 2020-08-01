@@ -17,6 +17,7 @@ from apps.users.models import User
 from apps.users.utils import (
     delete_user as delete_user_util,
     create_user as create_user_util,
+    send_reset_password_email,
 )
 
 logger = logging.getLogger(__name__)
@@ -213,6 +214,24 @@ class UpdatePassword(GenericResultMutation):
             return UpdatePassword(success=False, errors=errors)
 
 
+class sendResetPasswordMail(GenericResultMutation):
+    class Arguments:
+        username = graphene.String(required=True)
+
+    def mutate(self, info, username):
+        UserModel = get_user_model()
+
+        try:
+            user = UserModel.objects.get(username=username)
+        except UserModel.DoesNotExist:
+            return sendResetPasswordMail(
+                success=False, errors=["Invalid username"]
+            )
+
+        send_reset_password_email(user)
+        return sendResetPasswordMail(success=True)
+
+
 class DeleteUser(GenericResultMutation):
     """Mutation to delete a user"""
 
@@ -235,3 +254,4 @@ class Mutation(object):
     update_password = UpdatePassword.Field()
     is_username_valid = IsUsernameValid.Field()
     is_email_valid = IsEmailValid.Field()
+    send_reset_password_mail = sendResetPasswordMail.Field()

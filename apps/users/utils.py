@@ -1,10 +1,15 @@
 import logging
-import botocore
+from datetime import timedelta
 from itertools import chain
+
+import botocore
+from graphql_jwt.utils import jwt_encode
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
+from django.utils import timezone
 
 from apps.base.utils import (
     CreateModelResult,
@@ -14,6 +19,7 @@ from apps.base.utils import (
 from apps.users.models import DeletedUser, User
 
 DDB_PROFILES_TABLE = settings.AWS_DDB_PROFILES_TABLE
+RESET_PASSWORD_EMAIL = settings.AWS_SES_RESET_PASSWORD_EMAIL
 
 logger = logging.getLogger(__name__)
 
@@ -108,3 +114,51 @@ def dynamodb_create_profile(user):
         },
     )
     # fmt: on
+
+
+def get_reset_password_link(code):
+    base_url = (
+        "https://gateway.hyperlog.io"
+        if settings.DEBUG is False
+        else "http://localhost:8000"
+    )
+    return f"{base_url}/reset_password?code={code}"
+
+
+def send_reset_password_email(user):
+    """
+    Sends an email to the user with a link to reset the password
+    """
+    # Encode with expiry of 10 minutes
+    encoded = jwt_encode(
+        {
+            "username": user.username,
+            "exp": timezone.now() + timedelta(seconds=600),
+        }
+    )
+
+    from_email = RESET_PASSWORD_EMAIL
+    to = user.email
+    subject = "Reset your password"
+    text_content = """
+Hey %(username)s,
+We just received a request to reset your Hyperlog.io password. To do that, \
+just follow this link: %(reset_link)s.
+
+May the force be with you.
+
+Regards,
+Hyperlog Team
+""" % {
+        "username": user.username,
+        "reset_link": get_reset_password_link(encoded),
+    }
+
+    try:
+        send_mail(subject, text_content, from_email, [to])
+    except botocore.exceptions.ClientError:
+        if settings.DEBUG:  # Dev mode
+            print(text_content)
+
+        logger.exception("Reset Password: Unable to send email")
+        return
