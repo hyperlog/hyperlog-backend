@@ -103,9 +103,9 @@ def oauth_github_callback(request):
                 "error_description": request.GET.get("error_description"),
                 "error_uri": request.GET.get("error_uri"),
             }
-            logger.error(f"Github OAuth error\n{error}")
+            logger.error(f"GitHub OAuth error\n{error}")
             return render_github_oauth_fail(
-                errors=[error["error_description"]]
+                request, errors=["Something went wrong. Please try again"]
             )
         return render_github_oauth_fail(
             request, errors=["No code found in parameters"]
