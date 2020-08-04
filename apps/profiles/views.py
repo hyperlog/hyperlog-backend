@@ -28,7 +28,6 @@ try:
     GITHUB_CLIENT_ID = settings.GITHUB_CLIENT_ID
     GITHUB_CLIENT_SECRET = settings.GITHUB_CLIENT_SECRET
     GITHUB_REDIRECT_URI = settings.GITHUB_REDIRECT_URI
-    GITHUB_OAUTH_SCOPES = settings.GITHUB_OAUTH_SCOPES
 except AttributeError:
     tb = sys.exc_info()[2]
     raise Exception(
@@ -36,6 +35,13 @@ except AttributeError:
         "Check traceback for more info."
     ).with_traceback(tb)
 
+GITHUB_SCOPES_PUBLIC_REPO = [
+    "public_repo",
+    "read:user",
+    "read:org",
+    "user:email",
+]
+GITHUB_SCOPES_FULL_REPO = ["repo", "read:user", "read:org", "user:email"]
 GITHUB_AUTHORIZATION_URL = "https://github.com/login/oauth/authorize"
 GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 
@@ -43,6 +49,9 @@ GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 @require_http_methods(["GET"])
 @custom_jwt_cookie
 def connect_github(request):
+    """
+    URL format: /connect_github?token=<THE_TOKEN>&repos_scope=full
+    """
 
     if "token" in request.GET:
         token = request.GET.get("token")
@@ -58,9 +67,15 @@ def connect_github(request):
         # make token accessible for cookie middleware
         request.jwt_token = token
 
-        # redirect to github oauth
-        response = redirect(reverse("profiles:oauth_github"))
-        return response
+        # Default repos_scope to public unless explicitly defined
+        repos_scope = (
+            "full" if request.GET.get("repos_scope") == "full" else "public"
+        )
+
+        # redirect to github oauth with querystring params for scopes
+        redirect_url = reverse("profiles:oauth_github")
+        redirect_url = f"{redirect_url}?repos_scope={repos_scope}"
+        return redirect(redirect_url)
 
     else:
         # If token parameter was not present
@@ -71,10 +86,17 @@ def connect_github(request):
 @custom_jwt_cookie
 def oauth_github(request):
     if request.user.is_authenticated:
+        # Default to only public repos if ?repos_scope is not explicitly 'full'
+        scopes = (
+            GITHUB_SCOPES_FULL_REPO
+            if request.GET.get("repos_scope") == "full"
+            else GITHUB_SCOPES_PUBLIC_REPO
+        )
+
         github = OAuth2Session(
             client_id=GITHUB_CLIENT_ID,
             redirect_uri=GITHUB_REDIRECT_URI,
-            scope=GITHUB_OAUTH_SCOPES,
+            scope=scopes,
         )
         authorization_url, state = github.authorization_url(
             GITHUB_AUTHORIZATION_URL
