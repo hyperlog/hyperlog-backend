@@ -15,10 +15,12 @@ from apps.base.utils import (
     CreateModelResult,
     get_error_messages,
     get_aws_client,
+    get_or_create_sns_topic_by_topic_name,
 )
 from apps.users.models import DeletedUser, User
 
 DDB_PROFILES_TABLE = settings.AWS_DDB_PROFILES_TABLE
+SNS_USER_DELETE_TOPIC = settings.AWS_SNS_USER_DELETE_TOPIC
 RESET_PASSWORD_EMAIL = settings.AWS_SES_RESET_PASSWORD_EMAIL
 
 logger = logging.getLogger(__name__)
@@ -78,6 +80,8 @@ def delete_user(user: User) -> DeletedUser:
     The objects with this model as foreign key will be deleted (e.g. the
     GithubProfile)
     """
+    user_id = user.id
+
     # Get the dict representation of user and rename the ID field
     user_dict = to_dict(user)
     user_dict["old_user_id"] = user_dict.pop("id")
@@ -90,6 +94,11 @@ def delete_user(user: User) -> DeletedUser:
     deleted_user = DeletedUser(**kwargs)
     deleted_user.save()
     user.delete()
+
+    try:
+        sns_publish_user_delete_event(user_id)
+    except botocore.exceptions.ClientError:
+        logger.exception("Couldn't publish user_delete SNS event")
 
     return deleted_user
 
@@ -162,3 +171,17 @@ Hyperlog Team
 
         logger.exception("Reset Password: Unable to send email")
         return
+
+
+def sns_publish_user_delete_event(user_id):
+    """
+    Publishes the user.delete event to the SNS topic
+    (AWS_SNS_USER_DELETE_TOPIC in env vars)
+    """
+    topic = get_or_create_sns_topic_by_topic_name(SNS_USER_DELETE_TOPIC)
+    return topic.publish(
+        Message=str(timezone.now().timestamp()),
+        MessageAttributes={
+            "user_id": {"DataType": "String", "StringValue": str(user_id)}
+        },
+    )

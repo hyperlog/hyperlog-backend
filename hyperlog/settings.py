@@ -218,6 +218,10 @@ AWS_SNS_PROFILE_ANALYSIS_TOPIC = (
     env("AWS_SNS_PROFILE_ANALYSIS_TOPIC", default="RepoAnalysis")
     + f"-{'prod' if DEBUG is False else 'dev'}"
 )
+AWS_SNS_USER_DELETE_TOPIC = (
+    env("AWS_SNS_USER_DELETE_TOPIC", default="user_delete")
+    + f"-{'prod' if DEBUG is False else 'dev'}"
+)
 
 
 # Sentry
