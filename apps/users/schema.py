@@ -215,7 +215,7 @@ class UpdatePassword(GenericResultMutation):
             return UpdatePassword(success=False, errors=errors)
 
 
-class sendResetPasswordMail(GenericResultMutation):
+class SendResetPasswordMail(GenericResultMutation):
     class Arguments:
         username = graphene.String(required=True)
 
@@ -225,12 +225,12 @@ class sendResetPasswordMail(GenericResultMutation):
         try:
             user = UserModel.objects.get(username=username)
         except UserModel.DoesNotExist:
-            return sendResetPasswordMail(
+            return SendResetPasswordMail(
                 success=False, errors=["Invalid username"]
             )
 
         send_reset_password_email(user)
-        return sendResetPasswordMail(success=True)
+        return SendResetPasswordMail(success=True)
 
 
 class DeleteUser(GenericResultMutation):
@@ -279,5 +279,5 @@ class Mutation(object):
     update_password = UpdatePassword.Field()
     is_username_valid = IsUsernameValid.Field()
     is_email_valid = IsEmailValid.Field()
-    send_reset_password_mail = sendResetPasswordMail.Field()
+    send_reset_password_mail = SendResetPasswordMail.Field()
     login_with_github = LoginWithGithub.Field()
