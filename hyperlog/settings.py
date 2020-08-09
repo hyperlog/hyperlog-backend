@@ -171,7 +171,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 GITHUB_CLIENT_ID = env("GITHUB_CLIENT_ID", default="")
 GITHUB_CLIENT_SECRET = env("GITHUB_CLIENT_SECRET", default="")
-GITHUB_OAUTH_SCOPES = ["repo", "read:user", "read:org", "user:email"]
 GITHUB_REDIRECT_URI = env("GITHUB_REDIRECT_URI", default="")
 
 
