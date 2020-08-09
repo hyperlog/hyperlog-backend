@@ -3,6 +3,7 @@ from datetime import timedelta
 from itertools import chain
 
 import botocore
+import requests
 from graphql_jwt.utils import jwt_encode
 
 from django.conf import settings
@@ -18,6 +19,13 @@ from apps.base.utils import (
     get_or_create_sns_topic_by_topic_name,
 )
 from apps.users.models import DeletedUser, User
+
+GITHUB_OAUTH_ACCESS_TOKEN_URL = "https://github.com/login/oauth/access_token"
+GITHUB_AUTH_CLIENT_ID = settings.GITHUB_AUTH_CLIENT_ID
+GITHUB_AUTH_CLIENT_SECRET = settings.GITHUB_AUTH_CLIENT_SECRET
+
+GITHUB_GRAPHQL_API_URL = "https://api.github.com/graphql"
+GITHUB_REST_API_URL = "https://api.github.com"
 
 DDB_PROFILES_TABLE = settings.AWS_DDB_PROFILES_TABLE
 SNS_USER_DELETE_TOPIC = settings.AWS_SNS_USER_DELETE_TOPIC
@@ -101,6 +109,66 @@ def delete_user(user: User) -> DeletedUser:
         logger.exception("Couldn't publish user_delete SNS event")
 
     return deleted_user
+
+
+def execute_github_gql_query(query, token):
+    """Uses requests library to execute GitHub query"""
+    # ...
+    raise NotImplementedError
+
+
+def github_trade_code_for_token(code):
+    """
+    Attempts to use GitHub OAuth to trade the Authorization code for a token.
+
+    Returns the token (str type) if it's present in GitHub's response and
+    otherwise returns None.
+
+    A None response should be interpreted as an error
+    """
+    response = requests.post(
+        GITHUB_OAUTH_ACCESS_TOKEN_URL,
+        headers={"Accept": "application/json"},
+        data={
+            "client_id": GITHUB_AUTH_CLIENT_ID,
+            "client_secret": GITHUB_AUTH_CLIENT_SECRET,
+            "code": code,
+        },
+    ).json()
+
+    return response.get("access_token")
+
+
+def get_github_data_by_token(token):
+    """
+    Attempts a GraphQL query to the GitHub GraphQL API to get the user details:
+    1. uid (databaseId on GitHub GraphQL)
+    2. name
+    3. email
+
+    Note: First looks for a publicly visible email, and if it is not set, it
+    looks into all of user's emails and chooses the primary one.
+    """
+    retval = {"uid": None, "name": None, "email": None}
+
+    query = """
+    {
+      viewer {
+        databaseId
+        name
+        email
+      }
+    }
+    """
+
+    gql_response = execute_github_gql_query(query, token)
+
+    if gql_response["viewer"]["email"]:
+        # email is public email
+        return retval
+    else:
+        # get primary email from `GET /user/emails`
+        return retval
 
 
 def dynamodb_create_profile(user):

@@ -15,8 +15,9 @@ from apps.base.schema import GenericResultMutation
 from apps.base.utils import get_error_messages
 from apps.users.models import User
 from apps.users.utils import (
-    delete_user as delete_user_util,
     create_user as create_user_util,
+    delete_user as delete_user_util,
+    github_trade_code_for_token,
     send_reset_password_email,
 )
 
@@ -243,6 +244,30 @@ class DeleteUser(GenericResultMutation):
         return DeleteUser(success=True)
 
 
+class LoginWithGithub(GenericResultMutation):
+    """Mutation to login user with GitHub OAuth"""
+
+    token = graphene.String()
+    user = graphene.Field(UserType)
+
+    class Arguments:
+        code = graphene.String(required=True)
+
+    def mutate(self, info, code):
+        gh_token = github_trade_code_for_token(code)
+        if gh_token:
+            # Get user details
+
+            # Create user if does not exist
+
+            # return LoginWithGithub(success=True, token=jwt_token, user=user)
+            return
+        else:
+            return LoginWithGithub(
+                success=False, errors=["Couldn't connect with GitHub"]
+            )
+
+
 class Mutation(object):
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()
@@ -255,3 +280,4 @@ class Mutation(object):
     is_username_valid = IsUsernameValid.Field()
     is_email_valid = IsEmailValid.Field()
     send_reset_password_mail = sendResetPasswordMail.Field()
+    login_with_github = LoginWithGithub.Field()
