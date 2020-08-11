@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from apps.users.models import User, DeletedUser
+from apps.users.models import User, DeletedUser, GithubAuthUser
 from apps.users.forms import UserChangeForm, UserCreationForm
 
 
@@ -60,3 +60,4 @@ admin.site.register(User, UserAdmin)
 admin.site.unregister(Group)
 
 admin.site.register(DeletedUser)
+admin.site.register(GithubAuthUser)
