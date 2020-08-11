@@ -12,6 +12,7 @@ from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.utils import timezone
 
+from apps.base.github import execute_github_gql_query, get_user_emails
 from apps.base.utils import (
     CreateModelResult,
     get_error_messages,
@@ -111,12 +112,6 @@ def delete_user(user: User) -> DeletedUser:
     return deleted_user
 
 
-def execute_github_gql_query(query, token):
-    """Uses requests library to execute GitHub query"""
-    # ...
-    raise NotImplementedError
-
-
 def github_trade_code_for_token(code):
     """
     Attempts to use GitHub OAuth to trade the Authorization code for a token.
@@ -139,36 +134,52 @@ def github_trade_code_for_token(code):
     return response.get("access_token")
 
 
-def get_github_data_by_token(token):
+def github_get_uid_login_name(token):
     """
     Attempts a GraphQL query to the GitHub GraphQL API to get the user details:
-    1. uid (databaseId on GitHub GraphQL)
-    2. name
-    3. email
+    1. databaseId
+    2. login
+    3. name
 
-    Note: First looks for a publicly visible email, and if it is not set, it
-    looks into all of user's emails and chooses the primary one.
+    Returns a dict (with keys: "databaseId", "login" and "name")
     """
-    retval = {"uid": None, "name": None, "email": None}
-
     query = """
     {
       viewer {
         databaseId
+        login
         name
-        email
       }
     }
     """
 
-    gql_response = execute_github_gql_query(query, token)
+    try:
+        gql_response = execute_github_gql_query(query, token)
+    except Exception:
+        logger.exception("Couldn't execute GitHub query")
+        return None
 
-    if gql_response["viewer"]["email"]:
-        # email is public email
-        return retval
-    else:
-        # get primary email from `GET /user/emails`
-        return retval
+    if "error" in gql_response:
+        logger.error(f"GitHub API error\n{gql_response}")
+        return None
+
+    return gql_response["data"]["viewer"]
+
+
+def github_get_primary_email(token):
+    """Gets the primary email of the GitHub user"""
+    emails = iter(get_user_emails(token))
+    return next(email["email"] for email in emails if email["primary"] is True)
+
+
+def generate_random_username():
+    """Generates a totally random readable username"""
+    raise NotImplementedError
+
+
+def generate_random_password():
+    """Generates a totally random unreadable password"""
+    raise NotImplementedError
 
 
 def dynamodb_create_profile(user):

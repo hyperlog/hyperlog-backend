@@ -85,6 +85,8 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name="Registered at", auto_now_add=timezone.now
     )
 
+    new_user = models.BooleanField(verbose_name="New User", default=False)
+
     # Fields settings
     EMAIL_FIELD = "email"
     USERNAME_FIELD = "username"
@@ -114,6 +116,16 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def get_short_name(self):
         return self.short_name
+
+    @property
+    def login_type(self):
+        if self.new_user and self.github_auth_user:
+            return "github"
+
+        if not self.new_user and self.github_auth_user:
+            return "password github"
+
+        return "password"
 
     def __str__(self):
         return self.full_name
@@ -160,3 +172,10 @@ class DeletedUser(models.Model):
 
     def __str__(self):
         return self.full_name
+
+
+class GithubAuthUser(models.Model):
+    id = models.IntegerField(verbose_name="GitHub ID", primary_key=True)
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="github_auth_user"
+    )

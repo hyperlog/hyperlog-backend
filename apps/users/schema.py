@@ -3,7 +3,9 @@ import logging
 import graphene
 import graphql_jwt
 from graphene_django import DjangoObjectType
+from graphql_jwt import signals as jwt_signals
 from graphql_jwt.decorators import login_required
+from graphql_jwt.shortcuts import get_token
 
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.hashers import check_password
@@ -13,10 +15,14 @@ from django.db.utils import Error as DjangoDBError
 
 from apps.base.schema import GenericResultMutation
 from apps.base.utils import get_error_messages
-from apps.users.models import User
+from apps.users.models import User, GithubAuthUser
 from apps.users.utils import (
     create_user as create_user_util,
     delete_user as delete_user_util,
+    generate_random_password,
+    generate_random_username,
+    github_get_primary_email,
+    github_get_user_data,
     github_trade_code_for_token,
     send_reset_password_email,
 )
@@ -247,8 +253,7 @@ class DeleteUser(GenericResultMutation):
 class LoginWithGithub(GenericResultMutation):
     """Mutation to login user with GitHub OAuth"""
 
-    token = graphene.String()
-    user = graphene.Field(UserType)
+    login = graphene.Field(Login)
 
     class Arguments:
         code = graphene.String(required=True)
@@ -257,11 +262,57 @@ class LoginWithGithub(GenericResultMutation):
         gh_token = github_trade_code_for_token(code)
         if gh_token:
             # Get user details
+            gh_user_data = github_get_user_data(gh_token)
+            if gh_user_data is None:
+                return LoginWithGithub(
+                    success=False, errors=["Couldn't connect with GitHub"]
+                )
 
-            # Create user if does not exist
+            gh_id, gh_login, name = (
+                gh_user_data["databaseId"],
+                gh_user_data["login"],
+                gh_user_data["name"],
+            )
 
-            # return LoginWithGithub(success=True, token=jwt_token, user=user)
-            return
+            # Check if user already exists
+            try:
+                user = GithubAuthUser.objects.get(id=gh_id)
+            except GithubAuthUser.DoesNotExist:
+                email = github_get_primary_email(gh_token)
+                username = generate_random_username()
+                password = generate_random_password()
+
+                # Try to create a new User
+                if name:
+                    name_split = name.split(maxsplit=1)
+                    if len(name_split) == 2:
+                        first_name, last_name = name_split
+                    else:
+                        first_name, last_name = name_split[0], ""
+                else:
+                    first_name, last_name = gh_login, ""
+
+                user_create = create_user_util(
+                    username=username,
+                    email=email,
+                    password=password,
+                    first_name=first_name,
+                    last_name=last_name,
+                )
+                if not user_create.success:
+                    return LoginWithGithub(
+                        success=False, errors=user_create.errors
+                    )
+
+                user = user_create.object
+
+            # Get the token and send a token_issued signal
+            jwt_token = get_token(user)
+            jwt_signals.token_issued.send(
+                sender=self.__class__, request=info.context, user=user
+            )
+
+            return LoginWithGithub(success=True, token=jwt_token, user=user)
         else:
             return LoginWithGithub(
                 success=False, errors=["Couldn't connect with GitHub"]
