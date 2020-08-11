@@ -33,17 +33,15 @@ logger = logging.getLogger(__name__)
 class UserType(DjangoObjectType):
     class Meta:
         model = User
-        fields = [
+        only_fields = [
             "id",
             "username",
             "email",
             "first_name",
             "last_name",
-            "full_name",
             "registered_at",
             "is_enrolled_for_mails",
             "new_user",
-            "login_type",
             # From relations
             "profiles",
             "notifications",
@@ -308,6 +306,7 @@ class LoginWithGithub(GenericResultMutation):
                     password=password,
                     first_name=first_name,
                     last_name=last_name,
+                    new_user=True,
                 )
                 if not user_create.success:
                     return LoginWithGithub(
