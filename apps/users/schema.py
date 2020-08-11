@@ -33,14 +33,17 @@ logger = logging.getLogger(__name__)
 class UserType(DjangoObjectType):
     class Meta:
         model = User
-        only_fields = [
+        fields = [
             "id",
             "username",
             "email",
             "first_name",
             "last_name",
+            "full_name",
             "registered_at",
             "is_enrolled_for_mails",
+            "new_user",
+            "login_type",
             # From relations
             "profiles",
             "notifications",
