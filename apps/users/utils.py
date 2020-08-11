@@ -171,7 +171,12 @@ def github_get_user_data(token):
 
 def github_get_primary_email(token):
     """Gets the primary email of the GitHub user"""
-    emails = iter(get_user_emails(token))
+    try:
+        emails = iter(get_user_emails(token))
+    except Exception:
+        logger.exception("Error while fetching emails from GitHub")
+        return None
+
     return next(email["email"] for email in emails if email["primary"] is True)
 
 

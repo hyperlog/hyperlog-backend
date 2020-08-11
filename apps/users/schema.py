@@ -280,6 +280,11 @@ class LoginWithGithub(GenericResultMutation):
                 user = GithubAuthUser.objects.get(id=gh_id)
             except GithubAuthUser.DoesNotExist:
                 email = github_get_primary_email(gh_token)
+                if email is None:
+                    return LoginWithGithub(
+                        success=False, errors=["Something went wrong"]
+                    )
+
                 username = generate_random_username()
                 password = generate_random_password()
 
