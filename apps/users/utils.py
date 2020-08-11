@@ -137,7 +137,7 @@ def github_trade_code_for_token(code):
     return response.get("access_token")
 
 
-def github_get_uid_login_name(token):
+def github_get_user_data(token):
     """
     Attempts a GraphQL query to the GitHub GraphQL API to get the user details:
     1. databaseId

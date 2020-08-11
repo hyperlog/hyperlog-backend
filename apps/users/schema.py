@@ -253,7 +253,8 @@ class DeleteUser(GenericResultMutation):
 class LoginWithGithub(GenericResultMutation):
     """Mutation to login user with GitHub OAuth"""
 
-    login = graphene.Field(Login)
+    token = graphene.String()
+    user = graphene.Field(UserType)
 
     class Arguments:
         code = graphene.String(required=True)
