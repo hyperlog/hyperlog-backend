@@ -14,7 +14,7 @@ from django.core.validators import validate_email
 from django.db.utils import Error as DjangoDBError
 
 from apps.base.schema import GenericResultMutation
-from apps.base.utils import get_error_messages
+from apps.base.utils import create_model_object, get_error_messages
 from apps.users.models import User, GithubAuthUser
 from apps.users.utils import (
     create_user as create_user_util,
@@ -277,7 +277,8 @@ class LoginWithGithub(GenericResultMutation):
 
             # Check if user already exists
             try:
-                user = GithubAuthUser.objects.get(id=gh_id)
+                gh_user = GithubAuthUser.objects.get(id=gh_id)
+                user = gh_user.user
             except GithubAuthUser.DoesNotExist:
                 email = github_get_primary_email(gh_token)
                 if email is None:
@@ -311,6 +312,14 @@ class LoginWithGithub(GenericResultMutation):
                     )
 
                 user = user_create.object
+
+                gh_user_create = create_model_object(
+                    GithubAuthUser, id=gh_id, user=user
+                )
+                if not gh_user_create.success:
+                    return LoginWithGithub(
+                        success=False, errors=gh_user_create.errors
+                    )
 
             # Get the token and send a token_issued signal
             jwt_token = get_token(user)
