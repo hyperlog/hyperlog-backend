@@ -1,9 +1,12 @@
 import logging
+import random
+import string
 from datetime import timedelta
 from itertools import chain
 
 import botocore
 import requests
+from coolname import generate as generate_readable
 from graphql_jwt.utils import jwt_encode
 
 from django.conf import settings
@@ -174,12 +177,15 @@ def github_get_primary_email(token):
 
 def generate_random_username():
     """Generates a totally random readable username"""
-    raise NotImplementedError
+    while True:
+        username = "".join(map(lambda x: x.capitalize(), generate_readable(2)))
+        if len(username) <= 15:
+            return username
 
 
-def generate_random_password():
+def generate_random_password(length):
     """Generates a totally random unreadable password"""
-    raise NotImplementedError
+    return "".join([random.choice(string.printable) for _ in range(length)])
 
 
 def dynamodb_create_profile(user):
