@@ -286,7 +286,7 @@ class LoginWithGithub(GenericResultMutation):
                     )
 
                 username = generate_random_username()
-                password = generate_random_password()
+                password = generate_random_password(16)
 
                 # Try to create a new User
                 if name:
