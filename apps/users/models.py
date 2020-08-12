@@ -6,10 +6,15 @@ from django.contrib.auth.models import (
     PermissionsMixin,
 )
 from django.contrib.auth.validators import UnicodeUsernameValidator
+from django.contrib.postgres.fields import JSONField
 from django.db import models
 from django.utils import timezone
 
 from apps.base.models import CICharField, CIEmailField
+
+
+def password_login_type():
+    return {"password": True}
 
 
 class UserManager(BaseUserManager):
@@ -86,6 +91,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
 
     new_user = models.BooleanField(verbose_name="New User", default=False)
+    login_types = JSONField(default=password_login_type)
 
     # Fields settings
     EMAIL_FIELD = "email"
@@ -117,16 +123,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     def get_short_name(self):
         return self.short_name
 
-    @property
-    def login_type(self):
-        if self.new_user and self.github_auth_user:
-            return "github"
-
-        if not self.new_user and self.github_auth_user:
-            return "password github"
-
-        return "password"
-
     def __str__(self):
         return self.full_name
 
@@ -141,6 +137,9 @@ class DeletedUser(models.Model):
     is_active = models.BooleanField(verbose_name="Active", default=True)
     is_staff = models.BooleanField(verbose_name="Staff", default=False)
     registered_at = models.DateTimeField(verbose_name="Registered at")
+
+    new_user = models.BooleanField(verbose_name="New User", default=False)
+    login_types = JSONField(default=password_login_type)
 
     # Fields specific to DeletedUser
     old_user_id = models.UUIDField(verbose_name="Old User ID")
@@ -172,10 +171,3 @@ class DeletedUser(models.Model):
 
     def __str__(self):
         return self.full_name
-
-
-class GithubAuthUser(models.Model):
-    id = models.IntegerField(verbose_name="GitHub ID", primary_key=True)
-    user = models.OneToOneField(
-        User, on_delete=models.CASCADE, related_name="github_auth_user"
-    )

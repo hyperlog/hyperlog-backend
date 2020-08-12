@@ -14,8 +14,8 @@ from django.core.validators import validate_email
 from django.db.utils import Error as DjangoDBError
 
 from apps.base.schema import GenericResultMutation
-from apps.base.utils import create_model_object, get_error_messages
-from apps.users.models import User, GithubAuthUser
+from apps.base.utils import get_error_messages
+from apps.users.models import User
 from apps.users.utils import (
     create_user as create_user_util,
     delete_user as delete_user_util,
@@ -42,6 +42,7 @@ class UserType(DjangoObjectType):
             "registered_at",
             "is_enrolled_for_mails",
             "new_user",
+            "login_types",
             # From relations
             "profiles",
             "notifications",
@@ -261,6 +262,8 @@ class LoginWithGithub(GenericResultMutation):
         code = graphene.String(required=True)
 
     def mutate(self, info, code):
+        UserModel = get_user_model()
+
         gh_token = github_trade_code_for_token(code)
         if gh_token:
             # Get user details
@@ -278,9 +281,8 @@ class LoginWithGithub(GenericResultMutation):
 
             # Check if user already exists
             try:
-                gh_user = GithubAuthUser.objects.get(id=gh_id)
-                user = gh_user.user
-            except GithubAuthUser.DoesNotExist:
+                user = UserModel.objects.get(login_types__github__id=gh_id)
+            except UserModel.DoesNotExist:
                 email = github_get_primary_email(gh_token)
                 if email is None:
                     return LoginWithGithub(
@@ -307,6 +309,7 @@ class LoginWithGithub(GenericResultMutation):
                     first_name=first_name,
                     last_name=last_name,
                     new_user=True,
+                    login_types={"github": {"id": gh_id}},
                 )
                 if not user_create.success:
                     return LoginWithGithub(
@@ -314,14 +317,6 @@ class LoginWithGithub(GenericResultMutation):
                     )
 
                 user = user_create.object
-
-                gh_user_create = create_model_object(
-                    GithubAuthUser, id=gh_id, user=user
-                )
-                if not gh_user_create.success:
-                    return LoginWithGithub(
-                        success=False, errors=gh_user_create.errors
-                    )
 
             # Get the token and send a token_issued signal
             jwt_token = get_token(user)

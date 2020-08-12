@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from apps.users.models import User, DeletedUser, GithubAuthUser
+from apps.users.models import User, DeletedUser
 from apps.users.forms import UserChangeForm, UserCreationForm
 
 
@@ -30,6 +30,7 @@ class UserAdmin(BaseUserAdmin):
             },
         ],
         ["Important dates", {"fields": ["last_login", "registered_at"]}],
+        ["Additional Auth", {"fields": ["new_user", "login_types"]}],
     ]
     # add_fieldsets is not a standard ModelAdmin attribute. UserAdmin
     # overrides get_fieldsets to use this attribute when creating a user.
@@ -60,4 +61,3 @@ admin.site.register(User, UserAdmin)
 admin.site.unregister(Group)
 
 admin.site.register(DeletedUser)
-admin.site.register(GithubAuthUser)
