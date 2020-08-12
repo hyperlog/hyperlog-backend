@@ -331,6 +331,41 @@ class LoginWithGithub(GenericResultMutation):
             )
 
 
+class ChangeUsername(GenericResultMutation):
+    """
+    Mutation to change username for users who were given an random username
+    """
+
+    class Arguments:
+        new = graphene.String(required=True)
+
+    @login_required
+    def mutate(self, info, new):
+        user = info.context.user
+
+        if user.new_user is True:
+            user.username = new
+            user.new_user = False
+
+            try:
+                user.full_clean()
+            except ValidationError as e:
+                return ChangeUsername(
+                    success=False, errors=get_error_messages(e)
+                )
+
+            user.save()
+            return ChangeUsername(success=True)
+
+        else:
+            return ChangeUsername(
+                success=False,
+                errors=[
+                    "Oops, you cannot change your username. Consider contacting the support team."  # noqa: E501
+                ],
+            )
+
+
 class Mutation(object):
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()
@@ -344,3 +379,4 @@ class Mutation(object):
     is_email_valid = IsEmailValid.Field()
     send_reset_password_mail = SendResetPasswordMail.Field()
     login_with_github = LoginWithGithub.Field()
+    change_username = ChangeUsername.Field()
