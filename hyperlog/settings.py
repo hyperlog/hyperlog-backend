@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
+from datetime import timedelta
 
 import environ
 
@@ -240,5 +241,14 @@ sentry_sdk.init(
 )
 
 
+# GRAPHQL_JWT (django-graphql-jwt app)
+
+GRAPHQL_JWT = {
+    "JWT_VERIFY_EXPIRATION": True,
+    "JWT_EXPIRATION_DELTA": timedelta(days=15),
+}
+
+
 # JWT
+
 JWT_CUSTOM_COOKIE_MIDDLEWARE_MAX_AGE = 30  # seconds
