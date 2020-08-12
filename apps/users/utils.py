@@ -169,6 +169,29 @@ def github_get_user_data(token):
     return gql_response["data"]["viewer"]
 
 
+def github_get_gh_id(token):
+    """Gets the GitHub ID for a user"""
+    query = """
+    {
+      viewer {
+        databaseId
+      }
+    }
+    """
+
+    try:
+        response = execute_github_gql_query(query, token)
+    except Exception:
+        logger.exception("Couldn't execute GitHub query")
+        return None
+
+    if "error" in response:
+        logger.error(f"GitHub API error\n{response}")
+        return None
+
+    return response["data"]["viewer"]["databaseId"]
+
+
 def github_get_primary_email(token):
     """Gets the primary email of the GitHub user"""
     try:

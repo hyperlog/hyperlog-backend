@@ -21,6 +21,7 @@ from apps.users.utils import (
     delete_user as delete_user_util,
     generate_random_password,
     generate_random_username,
+    github_get_gh_id,
     github_get_primary_email,
     github_get_user_data,
     github_trade_code_for_token,
@@ -366,6 +367,60 @@ class ChangeUsername(GenericResultMutation):
             )
 
 
+class AddGithubAuth(GenericResultMutation):
+    """
+    Mutation to associate an existing Hyperlog account with a GitHub Account
+    for authentication
+    """
+
+    class Arguments:
+        code = graphene.String(required=True)
+
+    @login_required
+    def mutate(self, info, code):
+        user = info.context.user
+
+        if "github" in user.login_types.keys():
+            return LoginWithGithub(
+                success=False,
+                errors=["You've already added a GitHub account!"],
+            )
+        else:
+            gh_token = github_trade_code_for_token(code)
+
+            if gh_token:
+                gh_id = github_get_gh_id(gh_token)
+
+                # Check if the GitHub account is already added to some user
+                if (
+                    get_user_model()
+                    .objects.filter(login_types__github__id=gh_id)
+                    .exists()
+                ):
+                    return AddGithubAuth(
+                        success=False,
+                        errors=[
+                            "This GitHub account is already added by a user."
+                        ],
+                    )
+                else:
+                    user.login_types["github"] = {"id": gh_id}
+                    try:
+                        user.full_clean()
+                    except ValidationError as e:
+                        return AddGithubAuth(
+                            success=False, errors=get_error_messages(e)
+                        )
+
+                    user.save()
+                    return AddGithubAuth(success=True)
+            else:
+                logger.error(f"Unable to fetch GitHub token for code '{code}'")
+                return AddGithubAuth(
+                    success=False, errors=["Something went wrong."]
+                )
+
+
 class Mutation(object):
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()
@@ -380,3 +435,4 @@ class Mutation(object):
     send_reset_password_mail = SendResetPasswordMail.Field()
     login_with_github = LoginWithGithub.Field()
     change_username = ChangeUsername.Field()
+    add_github_auth = AddGithubAuth.Field()
