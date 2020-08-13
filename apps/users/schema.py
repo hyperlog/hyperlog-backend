@@ -421,7 +421,7 @@ class AddGithubAuth(GenericResultMutation):
 
 
 class GetLinkToCreatePassword(GenericResultMutation):
-    reset_url = graphene.String()
+    url = graphene.String()
 
     @login_required
     def mutate(self, info, **kwargs):
@@ -433,7 +433,7 @@ class GetLinkToCreatePassword(GenericResultMutation):
             )
 
         reset_url = get_reset_password_link(user)
-        return GetLinkToCreatePassword(success=True, reset_url=reset_url)
+        return GetLinkToCreatePassword(success=True, url=reset_url)
 
 
 class Mutation(object):
@@ -451,3 +451,4 @@ class Mutation(object):
     login_with_github = LoginWithGithub.Field()
     change_username = ChangeUsername.Field()
     add_github_auth = AddGithubAuth.Field()
+    get_link_to_create_password = GetLinkToCreatePassword.Field()
