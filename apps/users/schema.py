@@ -20,6 +20,7 @@ from apps.users.utils import (
     create_user as create_user_util,
     delete_user as delete_user_util,
     generate_random_username,
+    get_reset_password_link,
     github_get_gh_id,
     github_get_primary_email,
     github_get_user_data,
@@ -417,6 +418,22 @@ class AddGithubAuth(GenericResultMutation):
                 return AddGithubAuth(
                     success=False, errors=["Something went wrong."]
                 )
+
+
+class GetLinkToCreatePassword(GenericResultMutation):
+    reset_url = graphene.String()
+
+    @login_required
+    def mutate(self, info, **kwargs):
+        user = info.context.user
+
+        if "password" in user.login_types:
+            return GetLinkToCreatePassword(
+                success=False, errors=["You already have a password!"]
+            )
+
+        reset_url = get_reset_password_link(user)
+        return GetLinkToCreatePassword(success=True, reset_url=reset_url)
 
 
 class Mutation(object):

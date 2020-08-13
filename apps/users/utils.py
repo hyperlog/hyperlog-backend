@@ -234,7 +234,14 @@ def dynamodb_create_profile(user):
     # fmt: on
 
 
-def get_reset_password_link(code):
+def get_reset_password_link(user):
+    # Encode with expiry of 10 minutes
+    code = jwt_encode(
+        {
+            "username": user.username,
+            "exp": timezone.now() + timedelta(seconds=600),
+        }
+    )
     base_url = (
         "https://gateway.hyperlog.io"
         if settings.DEBUG is False
@@ -247,13 +254,7 @@ def send_reset_password_email(user):
     """
     Sends an email to the user with a link to reset the password
     """
-    # Encode with expiry of 10 minutes
-    encoded = jwt_encode(
-        {
-            "username": user.username,
-            "exp": timezone.now() + timedelta(seconds=600),
-        }
-    )
+    url = get_reset_password_link(user)
 
     from_email = RESET_PASSWORD_EMAIL
     to = user.email
@@ -269,7 +270,7 @@ Regards,
 Hyperlog Team
 """ % {
         "username": user.username,
-        "reset_link": get_reset_password_link(encoded),
+        "reset_link": url,
     }
 
     try:
