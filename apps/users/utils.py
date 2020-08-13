@@ -1,6 +1,4 @@
 import logging
-import random
-import string
 from datetime import timedelta
 from itertools import chain
 
@@ -64,7 +62,10 @@ def create_user(username, email, password, **kwargs) -> CreateModelResult:
     user = get_user_model()(
         username=username.lower(), email=email.lower(), **kwargs
     )
-    user.set_password(password)
+    if password is None:
+        user.set_unusable_password()
+    else:
+        user.set_password(password)
 
     try:
         # Run all validations
@@ -209,11 +210,6 @@ def generate_random_username():
         username = "".join(map(lambda x: x.capitalize(), generate_readable(2)))
         if len(username) <= 15:
             return username
-
-
-def generate_random_password(length):
-    """Generates a totally random unreadable password"""
-    return "".join([random.choice(string.printable) for _ in range(length)])
 
 
 def dynamodb_create_profile(user):

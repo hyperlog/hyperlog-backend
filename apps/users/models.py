@@ -126,6 +126,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.full_name
 
+    def set_password(self, raw_password):
+        """Overriding to set "password" key in user.login_types to True"""
+        if raw_password is not None:
+            self.login_types["password"] = True
+
+        return super().set_password(raw_password)
+
 
 class DeletedUser(models.Model):
     username = models.CharField(verbose_name="Username", max_length=30)

@@ -19,7 +19,6 @@ from apps.users.models import User
 from apps.users.utils import (
     create_user as create_user_util,
     delete_user as delete_user_util,
-    generate_random_password,
     generate_random_username,
     github_get_gh_id,
     github_get_primary_email,
@@ -291,7 +290,6 @@ class LoginWithGithub(GenericResultMutation):
                     )
 
                 username = generate_random_username()
-                password = generate_random_password(16)
 
                 # Try to create a new User
                 if name:
@@ -306,7 +304,7 @@ class LoginWithGithub(GenericResultMutation):
                 user_create = create_user_util(
                     username=username,
                     email=email,
-                    password=password,
+                    password=None,
                     first_name=first_name,
                     last_name=last_name,
                     new_user=True,
