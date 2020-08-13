@@ -77,7 +77,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name="First name", max_length=30, default="first"
     )
     last_name = models.CharField(
-        verbose_name="Last name", max_length=30, default="last"
+        verbose_name="Last name", max_length=30, blank=True,
     )
 
     is_admin = models.BooleanField(verbose_name="Admin", default=False)
