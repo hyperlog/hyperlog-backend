@@ -234,7 +234,7 @@ def dynamodb_create_profile(user):
     # fmt: on
 
 
-def get_reset_password_link(user):
+def get_reset_password_link(user, linkType):
     # Encode with expiry of 10 minutes
     code = jwt_encode(
         {
@@ -247,14 +247,14 @@ def get_reset_password_link(user):
         if settings.DEBUG is False
         else "http://localhost:8000"
     )
-    return f"{base_url}/reset_password?code={code}"
+    return f"{base_url}/reset_password?code={code}&type={linkType}"
 
 
 def send_reset_password_email(user):
     """
     Sends an email to the user with a link to reset the password
     """
-    url = get_reset_password_link(user)
+    url = get_reset_password_link(user, "default")
 
     from_email = RESET_PASSWORD_EMAIL
     to = user.email

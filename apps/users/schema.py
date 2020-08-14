@@ -432,7 +432,7 @@ class GetLinkToCreatePassword(GenericResultMutation):
                 success=False, errors=["You already have a password!"]
             )
 
-        reset_url = get_reset_password_link(user)
+        reset_url = get_reset_password_link(user, "addNewAuth")
         return GetLinkToCreatePassword(success=True, url=reset_url)
 
 
