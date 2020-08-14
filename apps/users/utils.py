@@ -3,6 +3,8 @@ from datetime import timedelta
 from itertools import chain
 
 import botocore
+import requests
+from coolname import generate as generate_readable
 from graphql_jwt.utils import jwt_encode
 
 from django.conf import settings
@@ -11,6 +13,7 @@ from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.utils import timezone
 
+from apps.base.github import execute_github_gql_query, get_user_emails
 from apps.base.utils import (
     CreateModelResult,
     get_error_messages,
@@ -18,6 +21,13 @@ from apps.base.utils import (
     get_or_create_sns_topic_by_topic_name,
 )
 from apps.users.models import DeletedUser, User
+
+GITHUB_OAUTH_ACCESS_TOKEN_URL = "https://github.com/login/oauth/access_token"
+GITHUB_AUTH_CLIENT_ID = settings.GITHUB_AUTH_CLIENT_ID
+GITHUB_AUTH_CLIENT_SECRET = settings.GITHUB_AUTH_CLIENT_SECRET
+
+GITHUB_GRAPHQL_API_URL = "https://api.github.com/graphql"
+GITHUB_REST_API_URL = "https://api.github.com"
 
 DDB_PROFILES_TABLE = settings.AWS_DDB_PROFILES_TABLE
 SNS_USER_DELETE_TOPIC = settings.AWS_SNS_USER_DELETE_TOPIC
@@ -52,7 +62,10 @@ def create_user(username, email, password, **kwargs) -> CreateModelResult:
     user = get_user_model()(
         username=username.lower(), email=email.lower(), **kwargs
     )
-    user.set_password(password)
+    if password is None:
+        user.set_unusable_password()
+    else:
+        user.set_password(password)
 
     try:
         # Run all validations
@@ -103,6 +116,102 @@ def delete_user(user: User) -> DeletedUser:
     return deleted_user
 
 
+def github_trade_code_for_token(code):
+    """
+    Attempts to use GitHub OAuth to trade the Authorization code for a token.
+
+    Returns the token (str type) if it's present in GitHub's response and
+    otherwise returns None.
+
+    A None response should be interpreted as an error
+    """
+    response = requests.post(
+        GITHUB_OAUTH_ACCESS_TOKEN_URL,
+        headers={"Accept": "application/json"},
+        data={
+            "client_id": GITHUB_AUTH_CLIENT_ID,
+            "client_secret": GITHUB_AUTH_CLIENT_SECRET,
+            "code": code,
+        },
+    ).json()
+
+    return response.get("access_token")
+
+
+def github_get_user_data(token):
+    """
+    Attempts a GraphQL query to the GitHub GraphQL API to get the user details:
+    1. databaseId
+    2. login
+    3. name
+
+    Returns a dict (with keys: "databaseId", "login" and "name")
+    """
+    query = """
+    {
+      viewer {
+        databaseId
+        login
+        name
+      }
+    }
+    """
+
+    try:
+        gql_response = execute_github_gql_query(query, token)
+    except Exception:
+        logger.exception("Couldn't execute GitHub query")
+        return None
+
+    if "error" in gql_response:
+        logger.error(f"GitHub API error\n{gql_response}")
+        return None
+
+    return gql_response["data"]["viewer"]
+
+
+def github_get_gh_id(token):
+    """Gets the GitHub ID for a user"""
+    query = """
+    {
+      viewer {
+        databaseId
+      }
+    }
+    """
+
+    try:
+        response = execute_github_gql_query(query, token)
+    except Exception:
+        logger.exception("Couldn't execute GitHub query")
+        return None
+
+    if "error" in response:
+        logger.error(f"GitHub API error\n{response}")
+        return None
+
+    return response["data"]["viewer"]["databaseId"]
+
+
+def github_get_primary_email(token):
+    """Gets the primary email of the GitHub user"""
+    try:
+        emails = iter(get_user_emails(token))
+    except Exception:
+        logger.exception("Error while fetching emails from GitHub")
+        return None
+
+    return next(email["email"] for email in emails if email["primary"] is True)
+
+
+def generate_random_username():
+    """Generates a totally random readable username"""
+    while True:
+        username = "".join(map(lambda x: x.capitalize(), generate_readable(2)))
+        if len(username) <= 15:
+            return username
+
+
 def dynamodb_create_profile(user):
     """Uses DynamoDB PutItem to create/update a profile on DynamoDB"""
     client = get_aws_client("dynamodb")
@@ -125,26 +234,27 @@ def dynamodb_create_profile(user):
     # fmt: on
 
 
-def get_reset_password_link(code):
+def get_reset_password_link(user, linkType):
+    # Encode with expiry of 10 minutes
+    code = jwt_encode(
+        {
+            "username": user.username,
+            "exp": timezone.now() + timedelta(seconds=600),
+        }
+    )
     base_url = (
         "https://gateway.hyperlog.io"
         if settings.DEBUG is False
         else "http://localhost:8000"
     )
-    return f"{base_url}/reset_password?code={code}"
+    return f"{base_url}/reset_password?code={code}&type={linkType}"
 
 
 def send_reset_password_email(user):
     """
     Sends an email to the user with a link to reset the password
     """
-    # Encode with expiry of 10 minutes
-    encoded = jwt_encode(
-        {
-            "username": user.username,
-            "exp": timezone.now() + timedelta(seconds=600),
-        }
-    )
+    url = get_reset_password_link(user, "default")
 
     from_email = RESET_PASSWORD_EMAIL
     to = user.email
@@ -160,7 +270,7 @@ Regards,
 Hyperlog Team
 """ % {
         "username": user.username,
-        "reset_link": get_reset_password_link(encoded),
+        "reset_link": url,
     }
 
     try:

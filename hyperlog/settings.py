@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",
     # third-party apps
     "channels",
     "corsheaders",
@@ -175,6 +176,12 @@ GITHUB_CLIENT_SECRET = env("GITHUB_CLIENT_SECRET", default="")
 GITHUB_REDIRECT_URI = env("GITHUB_REDIRECT_URI", default="")
 
 
+# GitHub Auth (auth app) OAuth
+
+GITHUB_AUTH_CLIENT_ID = env("GITHUB_AUTH_CLIENT_ID", default="")
+GITHUB_AUTH_CLIENT_SECRET = env("GITHUB_AUTH_CLIENT_SECRET", default="")
+
+
 # GRAPHQL
 
 GRAPHENE = {
@@ -239,6 +246,9 @@ sentry_sdk.init(
 GRAPHQL_JWT = {
     "JWT_VERIFY_EXPIRATION": True,
     "JWT_EXPIRATION_DELTA": timedelta(days=15),
+    "JWT_PAYLOAD_HANDLER": "apps.base.jwt_conf.jwt_payload_handler",
+    "JWT_PAYLOAD_GET_USERNAME_HANDLER": "apps.base.jwt_conf.jwt_payload_get_username_handler",  # noqa: E501
+    "JWT_GET_USER_BY_NATURAL_KEY_HANDLER": "apps.base.jwt_conf.jwt_payload_get_user_by_natural_key_handler",  # noqa: E501
 }
 
 
