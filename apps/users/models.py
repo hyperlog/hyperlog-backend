@@ -6,10 +6,15 @@ from django.contrib.auth.models import (
     PermissionsMixin,
 )
 from django.contrib.auth.validators import UnicodeUsernameValidator
+from django.contrib.postgres.fields import JSONField
 from django.db import models
 from django.utils import timezone
 
 from apps.base.models import CICharField, CIEmailField
+
+
+def password_login_type():
+    return {"password": True}
 
 
 class UserManager(BaseUserManager):
@@ -72,7 +77,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name="First name", max_length=30, default="first"
     )
     last_name = models.CharField(
-        verbose_name="Last name", max_length=30, default="last"
+        verbose_name="Last name", max_length=30, blank=True,
     )
 
     is_admin = models.BooleanField(verbose_name="Admin", default=False)
@@ -84,6 +89,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     registered_at = models.DateTimeField(
         verbose_name="Registered at", auto_now_add=timezone.now
     )
+
+    new_user = models.BooleanField(verbose_name="New User", default=False)
+    login_types = JSONField(default=password_login_type)
 
     # Fields settings
     EMAIL_FIELD = "email"
@@ -118,6 +126,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.full_name
 
+    def set_password(self, raw_password):
+        """Overriding to set "password" key in user.login_types to True"""
+        if raw_password is not None:
+            self.login_types["password"] = True
+
+        return super().set_password(raw_password)
+
 
 class DeletedUser(models.Model):
     username = models.CharField(verbose_name="Username", max_length=30)
@@ -129,6 +144,9 @@ class DeletedUser(models.Model):
     is_active = models.BooleanField(verbose_name="Active", default=True)
     is_staff = models.BooleanField(verbose_name="Staff", default=False)
     registered_at = models.DateTimeField(verbose_name="Registered at")
+
+    new_user = models.BooleanField(verbose_name="New User", default=False)
+    login_types = JSONField(default=password_login_type)
 
     # Fields specific to DeletedUser
     old_user_id = models.UUIDField(verbose_name="Old User ID")

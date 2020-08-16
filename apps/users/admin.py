@@ -30,6 +30,7 @@ class UserAdmin(BaseUserAdmin):
             },
         ],
         ["Important dates", {"fields": ["last_login", "registered_at"]}],
+        ["Additional Auth", {"fields": ["new_user", "login_types"]}],
     ]
     # add_fieldsets is not a standard ModelAdmin attribute. UserAdmin
     # overrides get_fieldsets to use this attribute when creating a user.

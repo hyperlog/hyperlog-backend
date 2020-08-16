@@ -3,7 +3,9 @@ import logging
 import graphene
 import graphql_jwt
 from graphene_django import DjangoObjectType
+from graphql_jwt import signals as jwt_signals
 from graphql_jwt.decorators import login_required
+from graphql_jwt.shortcuts import get_token
 
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.hashers import check_password
@@ -15,8 +17,15 @@ from apps.base.schema import GenericResultMutation
 from apps.base.utils import get_error_messages
 from apps.users.models import User
 from apps.users.utils import (
-    delete_user as delete_user_util,
     create_user as create_user_util,
+    delete_user as delete_user_util,
+    generate_random_username,
+    get_reset_password_link,
+    github_get_gh_id,
+    github_get_primary_email,
+    github_get_user_data,
+    github_trade_code_for_token,
+    send_reset_password_email,
 )
 
 logger = logging.getLogger(__name__)
@@ -33,6 +42,8 @@ class UserType(DjangoObjectType):
             "last_name",
             "registered_at",
             "is_enrolled_for_mails",
+            "new_user",
+            "login_types",
             # From relations
             "profiles",
             "notifications",
@@ -211,6 +222,24 @@ class UpdatePassword(GenericResultMutation):
             return UpdatePassword(success=False, errors=errors)
 
 
+class SendResetPasswordMail(GenericResultMutation):
+    class Arguments:
+        username = graphene.String(required=True)
+
+    def mutate(self, info, username):
+        UserModel = get_user_model()
+
+        try:
+            user = UserModel.objects.get(username=username)
+        except UserModel.DoesNotExist:
+            return SendResetPasswordMail(
+                success=False, errors=["Invalid username"]
+            )
+
+        send_reset_password_email(user)
+        return SendResetPasswordMail(success=True)
+
+
 class DeleteUser(GenericResultMutation):
     """Mutation to delete a user"""
 
@@ -222,7 +251,190 @@ class DeleteUser(GenericResultMutation):
         return DeleteUser(success=True)
 
 
-class Mutation(graphene.ObjectType):
+class LoginWithGithub(GenericResultMutation):
+    """Mutation to login user with GitHub OAuth"""
+
+    token = graphene.String()
+    user = graphene.Field(UserType)
+
+    class Arguments:
+        code = graphene.String(required=True)
+
+    def mutate(self, info, code):
+        UserModel = get_user_model()
+
+        gh_token = github_trade_code_for_token(code)
+        if gh_token:
+            # Get user details
+            gh_user_data = github_get_user_data(gh_token)
+            if gh_user_data is None:
+                return LoginWithGithub(
+                    success=False, errors=["Couldn't connect with GitHub"]
+                )
+
+            gh_id, gh_login, name = (
+                gh_user_data["databaseId"],
+                gh_user_data["login"],
+                gh_user_data["name"],
+            )
+
+            # Check if user already exists
+            try:
+                user = UserModel.objects.get(login_types__github__id=gh_id)
+            except UserModel.DoesNotExist:
+                email = github_get_primary_email(gh_token)
+                if email is None:
+                    return LoginWithGithub(
+                        success=False, errors=["Something went wrong"]
+                    )
+
+                username = generate_random_username()
+
+                # Try to create a new User
+                if name:
+                    name_split = name.split(maxsplit=1)
+                    if len(name_split) == 2:
+                        first_name, last_name = name_split
+                    else:
+                        first_name, last_name = name_split[0], ""
+                else:
+                    first_name, last_name = gh_login, ""
+
+                user_create = create_user_util(
+                    username=username,
+                    email=email,
+                    password=None,
+                    first_name=first_name,
+                    last_name=last_name,
+                    new_user=True,
+                    login_types={"github": {"id": gh_id}},
+                )
+                if not user_create.success:
+                    return LoginWithGithub(
+                        success=False, errors=user_create.errors
+                    )
+
+                user = user_create.object
+
+            # Get the token and send a token_issued signal
+            jwt_token = get_token(user)
+            jwt_signals.token_issued.send(
+                sender=self.__class__, request=info.context, user=user
+            )
+
+            return LoginWithGithub(success=True, token=jwt_token, user=user)
+        else:
+            return LoginWithGithub(
+                success=False, errors=["Couldn't connect with GitHub"]
+            )
+
+
+class ChangeUsername(GenericResultMutation):
+    """
+    Mutation to change username for users who were given an random username
+    """
+
+    class Arguments:
+        new = graphene.String(required=True)
+
+    @login_required
+    def mutate(self, info, new):
+        user = info.context.user
+
+        if user.new_user is True:
+            user.username = new
+            user.new_user = False
+
+            try:
+                user.full_clean()
+            except ValidationError as e:
+                return ChangeUsername(
+                    success=False, errors=get_error_messages(e)
+                )
+
+            user.save()
+            return ChangeUsername(success=True)
+
+        else:
+            return ChangeUsername(
+                success=False,
+                errors=[
+                    "Oops, you cannot change your username. Consider contacting the support team."  # noqa: E501
+                ],
+            )
+
+
+class AddGithubAuth(GenericResultMutation):
+    """
+    Mutation to associate an existing Hyperlog account with a GitHub Account
+    for authentication
+    """
+
+    class Arguments:
+        code = graphene.String(required=True)
+
+    @login_required
+    def mutate(self, info, code):
+        user = info.context.user
+
+        if "github" in user.login_types.keys():
+            return LoginWithGithub(
+                success=False,
+                errors=["You've already added a GitHub account!"],
+            )
+        else:
+            gh_token = github_trade_code_for_token(code)
+
+            if gh_token:
+                gh_id = github_get_gh_id(gh_token)
+
+                # Check if the GitHub account is already added to some user
+                if (
+                    get_user_model()
+                    .objects.filter(login_types__github__id=gh_id)
+                    .exists()
+                ):
+                    return AddGithubAuth(
+                        success=False,
+                        errors=[
+                            "This GitHub account is already added by a user."
+                        ],
+                    )
+                else:
+                    user.login_types["github"] = {"id": gh_id}
+                    try:
+                        user.full_clean()
+                    except ValidationError as e:
+                        return AddGithubAuth(
+                            success=False, errors=get_error_messages(e)
+                        )
+
+                    user.save()
+                    return AddGithubAuth(success=True)
+            else:
+                logger.error(f"Unable to fetch GitHub token for code '{code}'")
+                return AddGithubAuth(
+                    success=False, errors=["Something went wrong."]
+                )
+
+
+class GetLinkToCreatePassword(GenericResultMutation):
+    url = graphene.String()
+
+    @login_required
+    def mutate(self, info, **kwargs):
+        user = info.context.user
+
+        if "password" in user.login_types:
+            return GetLinkToCreatePassword(
+                success=False, errors=["You already have a password!"]
+            )
+
+        reset_url = get_reset_password_link(user, "addNewAuth")
+        return GetLinkToCreatePassword(success=True, url=reset_url)
+
+
+class Mutation(object):
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()
     register = Register.Field()
@@ -233,3 +445,8 @@ class Mutation(graphene.ObjectType):
     update_password = UpdatePassword.Field()
     is_username_valid = IsUsernameValid.Field()
     is_email_valid = IsEmailValid.Field()
+    send_reset_password_mail = SendResetPasswordMail.Field()
+    login_with_github = LoginWithGithub.Field()
+    change_username = ChangeUsername.Field()
+    add_github_auth = AddGithubAuth.Field()
+    get_link_to_create_password = GetLinkToCreatePassword.Field()

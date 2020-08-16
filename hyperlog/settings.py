@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
+from datetime import timedelta
 
 import environ
 
@@ -37,7 +38,7 @@ SECRET_KEY = env(
 DEBUG = env.bool("DEBUG", default=True)
 
 ALLOWED_HOSTS = (
-    ["134.209.152.73", "gateway.hyperlog.io", "localhost"]
+    ["gateway.hyperlog.io", "localhost"]
     if DEBUG is False
     else ["*"]
 )
@@ -53,6 +54,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",
     # third-party apps
     "channels",
     "corsheaders",
@@ -171,8 +173,13 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 GITHUB_CLIENT_ID = env("GITHUB_CLIENT_ID", default="")
 GITHUB_CLIENT_SECRET = env("GITHUB_CLIENT_SECRET", default="")
-GITHUB_OAUTH_SCOPES = ["repo", "read:user", "read:org", "user:email"]
 GITHUB_REDIRECT_URI = env("GITHUB_REDIRECT_URI", default="")
+
+
+# GitHub Auth (auth app) OAuth
+
+GITHUB_AUTH_CLIENT_ID = env("GITHUB_AUTH_CLIENT_ID", default="")
+GITHUB_AUTH_CLIENT_SECRET = env("GITHUB_AUTH_CLIENT_SECRET", default="")
 
 
 # GRAPHQL
@@ -190,6 +197,7 @@ AUTHENTICATION_BACKENDS = [
     "graphql_jwt.backends.JSONWebTokenBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
+EMAIL_BACKEND = "django_ses.SESBackend"
 
 
 # Whitenoise
@@ -210,8 +218,15 @@ AWS_DDB_PROFILE_ANALYSIS_TABLE = (
     + f"-{'prod' if DEBUG is False else 'dev'}"
 )
 
+AWS_SES_REGION_ENDPOINT = f"email.{AWS_DEFAULT_REGION}.amazonaws.com"
+AWS_SES_RESET_PASSWORD_EMAIL = "Hyperlog Support <support@hyperlog.io>"
+
 AWS_SNS_PROFILE_ANALYSIS_TOPIC = (
     env("AWS_SNS_PROFILE_ANALYSIS_TOPIC", default="RepoAnalysis")
+    + f"-{'prod' if DEBUG is False else 'dev'}"
+)
+AWS_SNS_USER_DELETE_TOPIC = (
+    env("AWS_SNS_USER_DELETE_TOPIC", default="user_delete")
     + f"-{'prod' if DEBUG is False else 'dev'}"
 )
 
@@ -226,5 +241,17 @@ sentry_sdk.init(
 )
 
 
+# GRAPHQL_JWT (django-graphql-jwt app)
+
+GRAPHQL_JWT = {
+    "JWT_VERIFY_EXPIRATION": True,
+    "JWT_EXPIRATION_DELTA": timedelta(days=15),
+    "JWT_PAYLOAD_HANDLER": "apps.base.jwt_conf.jwt_payload_handler",
+    "JWT_PAYLOAD_GET_USERNAME_HANDLER": "apps.base.jwt_conf.jwt_payload_get_username_handler",  # noqa: E501
+    "JWT_GET_USER_BY_NATURAL_KEY_HANDLER": "apps.base.jwt_conf.jwt_payload_get_user_by_natural_key_handler",  # noqa: E501
+}
+
+
 # JWT
+
 JWT_CUSTOM_COOKIE_MIDDLEWARE_MAX_AGE = 30  # seconds
