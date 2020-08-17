@@ -8,7 +8,8 @@ addons:
       - postgresql-client-11
 env:
   global:
-    - PGPORT=5432
+    - PGPORT=5433
+    - POSTGRES_PORT=5433
 python:
   - 3.7
 install:
