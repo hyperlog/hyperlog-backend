@@ -13,7 +13,7 @@ python:
   - 3.7
 before_install:
   - sudo cp /etc/postgresql/{9.4,11}/main/pg_hba.conf  # Copy Travis' default config for our postgres version
-  - sudo service postgresql restart
+  - sudo systemctl restart postgresql@11-main
 install:
   - pip install -r requirements.txt
   - pip install flake8 coverage
