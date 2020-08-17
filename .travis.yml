@@ -6,6 +6,9 @@ addons:
     packages:
       - postgresql-11
       - postgresql-client-11
+env:
+  global:
+    - PGPORT=5432
 python:
   - 3.7
 install:
