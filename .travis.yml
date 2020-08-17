@@ -1,0 +1,23 @@
+langauge: python
+sudo: false
+addons:
+  postgresql: '11.8'
+  apt:
+    packages:
+      - postgresql-11
+      - postgresql-client-11
+python:
+  - 3.7
+  - 3.8
+env:
+  POSTGRES_NAME=hyperlog_test
+before_script:
+  - psql -c "CREATE DATABASE {{ POSTGRES_NAME }};" -U postgres
+install:
+  - pip install -r requirements.txt
+  - pip install flake8
+script:
+  - flake8 ./
+  - ENV_STAGE=testing coverage run manage.py test tests
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

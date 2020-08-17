@@ -434,7 +434,7 @@ class GetLinkToCreatePassword(GenericResultMutation):
         return GetLinkToCreatePassword(success=True, url=reset_url)
 
 
-class Mutation(object):
+class Mutation(graphene.ObjectType):
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()
     register = Register.Field()

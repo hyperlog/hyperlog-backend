@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
+import logging
 import os
 from datetime import timedelta
 
@@ -25,6 +26,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 env = environ.Env()
 env.read_env(os.path.join(BASE_DIR, ".env"))
 
+# Should be one of "development", "production", "testing"
+ENV = env("ENV_STAGE", default="development")
+
+if ENV == "testing":
+    logging.disable(logging.ERROR)
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
@@ -38,9 +45,7 @@ SECRET_KEY = env(
 DEBUG = env.bool("DEBUG", default=True)
 
 ALLOWED_HOSTS = (
-    ["gateway.hyperlog.io", "localhost"]
-    if DEBUG is False
-    else ["*"]
+    ["gateway.hyperlog.io", "localhost"] if DEBUG is False else ["*"]
 )
 
 
@@ -121,7 +126,7 @@ DATABASES = {
         "ENGINE": "django.db.backends.postgresql_psycopg2",
         "NAME": env("POSTGRES_NAME", default="hyperlog"),
         "USER": env("POSTGRES_USER", default="postgres"),
-        "PASSWORD": env("POSTGRES_PASSWORD", default="postgres"),
+        "PASSWORD": env("POSTGRES_PASSWORD", default=""),
         "HOST": env("POSTGRES_HOST", default="localhost"),
         "PORT": env("POSTGRES_PORT", default=5432),
     }
