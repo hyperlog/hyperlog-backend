@@ -1,0 +1,24 @@
+langauge: python
+sudo: false
+addons:
+  postgresql: "11"
+  apt:
+    packages:
+      - postgresql-11
+      - postgresql-client-11
+env:
+  global:
+    - POSTGRES_PORT=5433  # Travis uses this by default
+python:
+  - 3.7
+before_install:
+  - sudo cp /etc/postgresql/{9.4,11}/main/pg_hba.conf  # Copy Travis' default config to our postgres version
+  - sudo systemctl restart postgresql@11-main
+install:
+  - pip install -r requirements.txt
+  - pip install flake8 coverage
+script:
+  - flake8 ./
+  - ENV_STAGE=testing coverage run manage.py test tests
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

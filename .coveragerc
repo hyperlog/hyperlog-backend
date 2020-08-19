@@ -1,0 +1,11 @@
+[run]
+branch = True
+source = .
+omit =
+  tests/*
+
+[report]
+exclude_lines =
+  if __name__ == '__main__':
+  if settings.DEBUG:
+  pragma: no cover
