@@ -10,8 +10,6 @@ from graphql_jwt.shortcuts import get_token
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.hashers import check_password
 from django.core.exceptions import ValidationError
-from django.core.validators import validate_email
-from django.db.utils import Error as DjangoDBError
 
 from apps.base.schema import GenericResultMutation
 from apps.base.utils import get_error_messages
@@ -170,7 +168,6 @@ class UpdateUser(GenericResultMutation):
     """Mutation to update user's profile details"""
 
     class Arguments:
-        email = graphene.String()
         first_name = graphene.String()
         last_name = graphene.String()
 
@@ -178,30 +175,16 @@ class UpdateUser(GenericResultMutation):
     def mutate(self, info, **kwargs):
         user = info.context.user
 
-        if kwargs.get("email") and user.email != kwargs.get("email"):
-            email = kwargs["email"]
-            # Check for unique constraint
-            if get_user_model().objects.filter(email=email).exists():
-                errors = [f"User with email {email} already exists"]
-                return UpdateUser(success=False, errors=errors)
-
-            try:
-                validate_email(email)
-                user.email = email
-            except ValidationError as e:
-                errors = get_error_messages(e)
-                return UpdateUser(success=False, errors=errors)
-
         for field in ["first_name", "last_name"]:
-            if kwargs.get(field):
+            if kwargs.get(field) is not None:
                 setattr(user, field, kwargs.get(field))
 
         try:
+            user.full_clean()
             user.save()
             return UpdateUser(success=True)
-        except DjangoDBError as e:
-            errors = get_error_messages(e)
-            return UpdateUser(success=False, errors=errors)
+        except ValidationError as e:
+            return UpdateUser(success=False, errors=get_error_messages(e))
 
 
 class UpdatePassword(GenericResultMutation):
