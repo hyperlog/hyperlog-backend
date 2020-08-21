@@ -1,6 +1,7 @@
 import logging
 
 from django.contrib.auth import get_user_model
+from django.contrib.postgres.fields import JSONField
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -117,6 +118,16 @@ class GitlabProfile(BaseProfileModel):
 
 class BitbucketProfile(BaseProfileModel):
     objects = get_profile_manager_by_provider("bitbucket")()
+
+
+class StackOverflowProfile(models.Model):
+    id = models.IntegerField(primary_key=True, editable=False)
+    reputation = models.IntegerField()
+    badge_counts = JSONField()
+    link = models.CharField(max_length=255)
+    user = models.OneToOneField(
+        "users.User", on_delete=models.CASCADE, related_name="stack_overflow"
+    )
 
 
 class Notification(models.Model):

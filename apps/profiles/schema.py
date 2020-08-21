@@ -2,9 +2,11 @@ import logging
 
 import botocore
 import graphene
+import requests
 from graphene_django import DjangoObjectType
 from graphql_jwt.decorators import staff_member_required, login_required
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 
 from apps.profiles.models import (
@@ -12,6 +14,7 @@ from apps.profiles.models import (
     EmailAddress,
     Notification,
     ProfileAnalysis,
+    StackOverflowProfile,
 )
 from apps.base.schema import GenericResultMutation
 from apps.base.utils import (
@@ -23,8 +26,15 @@ from apps.profiles.utils import (
     dynamodb_add_selected_repos_to_profile_analysis_table,
     dynamodb_convert_boto_dict_to_python_dict,
     dynamodb_get_profile,
+    stack_overflow_get_user_data,
     trigger_analysis,
 )
+
+STACK_OVERFLOW_TOKEN_URL = "https://stackoverflow.com/oauth/access_token/json"
+STACK_OVERFLOW_CLIENT_ID = settings.STACK_OVERFLOW_CLIENT_ID
+STACK_OVERFLOW_CLIENT_SECRET = settings.STACK_OVERFLOW_CLIENT_SECRET
+STACK_OVERFLOW_REDIRECT_URI = settings.STACK_OVERFLOW_REDIRECT_URI
+
 
 logger = logging.getLogger(__name__)
 
@@ -211,8 +221,68 @@ class SelectRepos(GenericResultMutation):
         return SelectRepos(**analysis_result)
 
 
+class ConnectStackOverflow(GenericResultMutation):
+    class Arguments:
+        code = graphene.String(required=True)
+
+    @login_required
+    def mutate(self, info, code):
+        user = info.context.user
+
+        post_data = {
+            "client_id": STACK_OVERFLOW_CLIENT_ID,
+            "client_secret": STACK_OVERFLOW_CLIENT_SECRET,
+            "code": code,
+            "redirect_uri": STACK_OVERFLOW_REDIRECT_URI or "http://localhost",
+        }
+
+        oauth_response = requests.post(
+            STACK_OVERFLOW_TOKEN_URL,
+            headers={
+                "Accept": "application/json",
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            data="&".join([f"{key}={val}" for key, val in post_data.items()]),
+        )
+        data = oauth_response.json()
+
+        if (
+            oauth_response.status_code != requests.codes.ok
+            or "error_message" in data
+        ):
+            logger.error(
+                "Failed while trying to fetch token from StackOverflow\n"
+                f"Status Code: {oauth_response.status_code}\n"
+                f"Response: {data}"
+            )
+            return ConnectStackOverflow(
+                success=False,
+                errors=["Something went wrong. Please try again"],
+            )
+        else:
+            access_token = data["access_token"]
+
+            user_data = stack_overflow_get_user_data(access_token)
+            print(user_data)
+            if user_data is None:
+                return ConnectStackOverflow(
+                    success=False,
+                    errors=["Something went wrong. Please try again"],
+                )
+
+            stack_profile_creation = create_model_object(
+                StackOverflowProfile, user=user, **user_data
+            )
+            print(f"id: {stack_profile_creation.object.id}")
+            return ConnectStackOverflow(
+                success=stack_profile_creation.success,
+                errors=stack_profile_creation.errors,
+            )
+
+
 class Mutation(graphene.ObjectType):
     delete_github_profile = DeleteGithubProfile.Field()
     create_notification = CreateNotification.Field()
     mark_notification_as_read = MarkNotificationAsRead.Field()
     select_repos = SelectRepos.Field()
+    connect_stackoverflow = ConnectStackOverflow.Field()

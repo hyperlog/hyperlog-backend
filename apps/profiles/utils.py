@@ -1,6 +1,7 @@
 import logging
 
 import botocore
+import requests
 
 from django.conf import settings
 from django.shortcuts import render
@@ -18,6 +19,9 @@ SNS_PROFILE_ANALYSIS_TOPIC = settings.AWS_SNS_PROFILE_ANALYSIS_TOPIC
 
 GITHUB_SUCCESS_TEMPLATE_PATH = "profiles/github_success.html"
 GITHUB_FAIL_TEMPLATE_PATH = "profiles/github_fail.html"
+
+STACK_OVERFLOW_API_BASE_URL = "https://api.stackexchange.com/2.2"
+STACK_OVERFLOW_KEY = settings.STACK_OVERFLOW_KEY
 
 
 logger = logging.getLogger(__name__)
@@ -235,3 +239,36 @@ def trigger_analysis(user, github_token):
 
     # successfully triggered
     return {"success": True}
+
+
+def stack_overflow_get_user_data(token):
+    payload = {
+        "site": "stackoverflow",
+        "access_token": token,
+        "key": STACK_OVERFLOW_KEY,
+    }
+
+    url = f"{STACK_OVERFLOW_API_BASE_URL}/me"
+    response = requests.get(
+        url, headers={"Accept": "application/json"}, params=payload
+    )
+
+    if response.status_code == requests.codes.ok:
+        data = response.json()
+        print(data)
+
+        # Note: The 'id'is actually the StackOverflow-specific 'user_id' and
+        # not Stack Exchange's global 'account_id'
+        return {
+            "id": data["items"][0]["user_id"],
+            "reputation": data["items"][0]["reputation"],
+            "badge_counts": data["items"][0]["badge_counts"],
+            "link": data["items"][0]["link"],
+        }
+    else:
+        logger.error(
+            "Error while fetching data from Stack Exchange API\n"
+            f"Status Code: {response.status_code}"
+            f"Response: {response.json()}"
+        )
+        return None
