@@ -257,7 +257,7 @@ def stack_overflow_get_user_data(token):
         data = response.json()
         print(data)
 
-        # Note: The 'id'is actually the StackOverflow-specific 'user_id' and
+        # Note: The 'id' is actually the StackOverflow-specific 'user_id' and
         # not Stack Exchange's global 'account_id'
         return {
             "id": data["items"][0]["user_id"],
@@ -268,7 +268,7 @@ def stack_overflow_get_user_data(token):
     else:
         logger.error(
             "Error while fetching data from Stack Exchange API\n"
-            f"Status Code: {response.status_code}"
+            f"Status Code: {response.status_code}\n"
             f"Response: {response.json()}"
         )
         return None
