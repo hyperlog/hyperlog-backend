@@ -64,6 +64,11 @@ class NotificationType(DjangoObjectType):
         model = Notification
 
 
+class StackOverflowProfileType(DjangoObjectType):
+    class Meta:
+        model = StackOverflowProfile
+
+
 class Query(graphene.ObjectType):
     profile = graphene.Field(ProfileType, id=graphene.Int(required=True))
 

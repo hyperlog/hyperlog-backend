@@ -48,6 +48,7 @@ class UserType(DjangoObjectType):
             "profiles",
             "notifications",
             "widget",
+            "stack_overflow",
         ]
 
 

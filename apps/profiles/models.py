@@ -129,6 +129,9 @@ class StackOverflowProfile(models.Model):
         "users.User", on_delete=models.CASCADE, related_name="stack_overflow"
     )
 
+    def __str__(self):
+        return f"<StackOverflowProfile: {self.id}>"
+
 
 class Notification(models.Model):
     """
