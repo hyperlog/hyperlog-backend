@@ -9,6 +9,8 @@ services:
       - POSTGRES_PASSWORD=postgres
     ports:
       - "5432:5432"
+    networks:
+      - hyperlog_db_shared
 
   web:
     restart: always
@@ -21,3 +23,8 @@ services:
       - "8000:8000"
     depends_on:
       - postgres_db
+    networks:
+      - hyperlog_db_shared
+
+networks:
+  hyperlog_db_shared:
