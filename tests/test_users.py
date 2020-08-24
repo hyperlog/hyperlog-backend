@@ -221,7 +221,6 @@ class UserAuthTestCase(BaseTestCase):
         }
 
         response = self.query(self.register_mutation, variables=variables)
-        print(response.json())
 
         self.assertResponseNoErrors(response)
 
