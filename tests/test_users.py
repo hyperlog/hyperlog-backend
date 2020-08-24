@@ -6,6 +6,7 @@ from graphene_django.utils.testing import GraphQLTestCase
 from graphql_jwt.shortcuts import get_token, get_user_by_token
 
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.core.exceptions import ValidationError
 
 from apps.users.schema import Query, Mutation
@@ -587,3 +588,44 @@ class UpdateUserTestCase(BaseTestCase):
         self.user.refresh_from_db()
         self.assertFalse(self.user.check_password(new_password))
         self.assertTrue(self.user.check_password(self.password))
+
+
+class ResetPasswordTestCase(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+
+        self.mutation_reset_pwd_mail = """
+            mutation($username: String!) {
+                sendResetPasswordMail(username: $username) {
+                    success
+                    errors
+                }
+            }
+        """
+
+    def test_reset_password_mail_ok(self):
+        response = self.query(
+            self.mutation_reset_pwd_mail,
+            variables={"username": self.user.username},
+        )
+        self.assertResponseNoErrors(response)
+
+        data = response.json()
+        self.assertTrue(data["data"]["sendResetPasswordMail"]["success"])
+        self.assertIsNone(data["data"]["sendResetPasswordMail"]["errors"])
+
+        self.assertEqual(len(mail.outbox), 1)
+        sent_mail = mail.outbox[0]
+        self.assertEqual(sent_mail.to, [self.user.email])
+
+    def test_reset_password_mail_username_does_not_exist(self):
+        response = self.query(
+            self.mutation_reset_pwd_mail,
+            variables={"username": "doesNotExist"},
+        )
+
+        data = response.json()
+        self.assertFalse(data["data"]["sendResetPasswordMail"]["success"])
+        self.assertIsNotNone(data["data"]["sendResetPasswordMail"]["errors"])
+
+        self.assertEqual(len(mail.outbox), 0)
