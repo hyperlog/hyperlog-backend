@@ -38,7 +38,9 @@ SECRET_KEY = env(
 DEBUG = env.bool("DEBUG", default=True)
 
 ALLOWED_HOSTS = (
-    ["gateway.hyperlog.io", "localhost"] if DEBUG is False else ["*"]
+    ["staging.gateway.hyperlog.io", "gateway.hyperlog.io", "localhost"]
+    if DEBUG is False
+    else ["*"]
 )
 
 
@@ -178,6 +180,14 @@ GITHUB_REDIRECT_URI = env("GITHUB_REDIRECT_URI", default="")
 
 GITHUB_AUTH_CLIENT_ID = env("GITHUB_AUTH_CLIENT_ID", default="")
 GITHUB_AUTH_CLIENT_SECRET = env("GITHUB_AUTH_CLIENT_SECRET", default="")
+
+
+# StackOverflow OAuth / API (Stack Exchange)
+
+STACK_OVERFLOW_CLIENT_ID = env("STACK_OVERFLOW_CLIENT_ID", default="")
+STACK_OVERFLOW_CLIENT_SECRET = env("STACK_OVERFLOW_CLIENT_SECRET", default="")
+STACK_OVERFLOW_REDIRECT_URI = env("STACK_OVERFLOW_REDIRECT_URI", default="")
+STACK_OVERFLOW_KEY = env("STACK_OVERFLOW_KEY", default="")
 
 
 # GRAPHQL
