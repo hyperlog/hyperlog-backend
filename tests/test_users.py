@@ -9,6 +9,7 @@ from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.exceptions import ValidationError
 
+from apps.users.models import DeletedUser
 from apps.users.schema import Query, Mutation
 
 
@@ -629,3 +630,44 @@ class ResetPasswordTestCase(BaseTestCase):
         self.assertIsNotNone(data["data"]["sendResetPasswordMail"]["errors"])
 
         self.assertEqual(len(mail.outbox), 0)
+
+
+class DeleteUserTestCase(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.mutation_delete_user = """
+            mutation {
+                deleteUser {
+                    success
+                    errors
+                }
+            }
+        """
+
+    def tearDown(self):
+        # Default teardown attempts to `self.user.delete()`. This would throw
+        # error if object is already deleted
+        if self.user.pk is not None:
+            self.user.delete()
+
+    def test_delete_user_ok(self):
+        old_user_id = self.user.id
+
+        response = self.query(
+            self.mutation_delete_user, headers=self.auth_headers
+        )
+        self.assertResponseNoErrors(response)
+
+        data = response.json()
+        self.assertTrue(data["data"]["deleteUser"]["success"])
+        self.assertIsNone(data["data"]["deleteUser"]["errors"])
+
+        self.assertTrue(
+            DeletedUser.objects.filter(old_user_id=old_user_id).exists()
+        )
+
+    def test_delete_user_not_authenticated(self):
+        response = self.query(self.mutation_delete_user)
+        self.assertResponseHasErrors(response)
+
+        self.assertEqual(len(DeletedUser.objects.all()), 0)
