@@ -228,6 +228,7 @@ AWS_DDB_PROFILE_ANALYSIS_TABLE = (
 
 AWS_SES_REGION_ENDPOINT = f"email.{AWS_DEFAULT_REGION}.amazonaws.com"
 AWS_SES_RESET_PASSWORD_EMAIL = "Hyperlog Support <support@hyperlog.io>"
+AWS_SES_REPLYTO_EMAIL = "Aditya from Hyperlog <aditya@hyperlog.io>"
 
 AWS_SNS_PROFILE_ANALYSIS_TOPIC = (
     env("AWS_SNS_PROFILE_ANALYSIS_TOPIC", default="RepoAnalysis")
