@@ -3,18 +3,17 @@ import logging
 import botocore
 import graphene
 import requests
+from graphql import GraphQLError
 from graphene_django import DjangoObjectType
 from graphql_jwt.decorators import staff_member_required, login_required
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
-from apps.profiles.models import (
-    BaseProfileModel,
-    EmailAddress,
-    Notification,
-    ProfileAnalysis,
-    StackOverflowProfile,
+from apps.base.github import (
+    github_trade_code_for_token,
+    github_get_user_data,
+    get_user_emails as github_get_user_emails,
 )
 from apps.base.schema import GenericResultMutation
 from apps.base.utils import (
@@ -22,13 +21,25 @@ from apps.base.utils import (
     get_error_messages,
     get_model_object,
 )
+from apps.profiles.models import (
+    BaseProfileModel,
+    EmailAddress,
+    GithubProfile,
+    Notification,
+    ProfileAnalysis,
+    StackOverflowProfile,
+)
 from apps.profiles.utils import (
+    create_profile_object,
     dynamodb_add_selected_repos_to_profile_analysis_table,
     dynamodb_convert_boto_dict_to_python_dict,
     dynamodb_get_profile,
     stack_overflow_get_user_data,
     trigger_analysis,
 )
+
+GITHUB_CLIENT_ID = settings.GITHUB_CLIENT_ID
+GITHUB_CLIENT_SECRET = settings.GITHUB_CLIENT_SECRET
 
 STACK_OVERFLOW_TOKEN_URL = "https://stackoverflow.com/oauth/access_token/json"
 STACK_OVERFLOW_CLIENT_ID = settings.STACK_OVERFLOW_CLIENT_ID
@@ -226,6 +237,59 @@ class SelectRepos(GenericResultMutation):
         return SelectRepos(**analysis_result)
 
 
+class ConnectGithub(GenericResultMutation):
+    class Arguments:
+        code = graphene.String(required=True)
+
+    @login_required
+    def mutate(self, info, code):
+        user = info.context.user
+
+        if user.profiles.filter(_provider="github").exists():
+            raise GraphQLError("You have already connected a GitHub account!")
+
+        # TODO: Edit trade_token function to check the scope of token
+        gh_token = github_trade_code_for_token(
+            code, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
+        )
+
+        # Get user data
+        if gh_token:
+            gh_user_data = github_get_user_data(gh_token)
+
+            # Unable to fetch user data
+            if gh_user_data is None:
+                raise GraphQLError("Couldn't connect with GitHub API")
+
+            gh_id, gh_login = gh_user_data["databaseId"], gh_user_data["login"]
+
+            # Try to create a GitHub Profile
+            profile_creation = create_profile_object(
+                GithubProfile,
+                access_token=gh_token,
+                username=gh_login,
+                provider_uid=gh_id,
+                user=user,
+            )
+
+            if profile_creation.success:
+                profile = profile_creation.object
+                emails = github_get_user_emails(gh_token)
+                for email_dict in emails:
+                    # TODO: Add primary and verified parameters
+                    create_model_object(
+                        EmailAddress,
+                        email=email_dict.get("email"),
+                        profile=profile,
+                    )
+
+                return ConnectGithub(success=True)
+            else:
+                raise GraphQLError("\n".join(profile_creation.errors))
+        else:
+            raise GraphQLError("Couldn't connect with GitHub")
+
+
 class ConnectStackOverflow(GenericResultMutation):
     class Arguments:
         code = graphene.String(required=True)
@@ -291,3 +355,4 @@ class Mutation(graphene.ObjectType):
     mark_notification_as_read = MarkNotificationAsRead.Field()
     select_repos = SelectRepos.Field()
     connect_stackoverflow = ConnectStackOverflow.Field()
+    connect_github = ConnectGithub.Field()
