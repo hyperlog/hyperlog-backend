@@ -46,6 +46,7 @@ class UserType(DjangoObjectType):
             "new_user",
             "login_types",
             "tagline",
+            "social_links",
             # From relations
             "profiles",
             "notifications",
@@ -459,6 +460,41 @@ class SetTagline(graphene.Mutation):
         return SetTagline(success=True)
 
 
+class SetSocialLinks(graphene.Mutation):
+    """
+    Give '$provider: $handle' pairs as arguments to add/update and use
+    '$provider: ""' to remove an existing social profile
+    """
+
+    success = graphene.Boolean(required=True)
+
+    @classmethod
+    def Field(cls, *args, **kwargs):
+        # Update Arguments dynamically to guarantee consistency
+        cls._meta.arguments.update(
+            [(s, graphene.String()) for s in User.SUPPORTED_SOCIAL_LINKS]
+        )
+        return super().Field(*args, **kwargs)
+
+    @login_required
+    def mutate(self, info, **kwargs):
+        user = info.context.user
+
+        for (key, val) in kwargs.items():
+            if val == "":
+                user.social_links.pop(key, None)
+            else:
+                user.social_links[key] = val
+
+        try:
+            user.full_clean()
+        except ValidationError as e:
+            raise GraphQLError(get_error_messages(e)[0])
+
+        user.save()
+        return SetSocialLinks(success=True)
+
+
 class Mutation(object):
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()
@@ -476,3 +512,4 @@ class Mutation(object):
     add_github_auth = AddGithubAuth.Field()
     get_link_to_create_password = GetLinkToCreatePassword.Field()
     set_tagline = SetTagline.Field()
+    set_social_links = SetSocialLinks.Field()

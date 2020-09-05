@@ -7,6 +7,7 @@ from django.contrib.auth.models import (
 )
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.contrib.postgres.fields import JSONField
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -15,6 +16,16 @@ from apps.base.models import CICharField, CIEmailField
 
 def password_login_type():
     return {"password": True}
+
+
+def default_social_links():
+    return {}
+
+
+def validate_social_links(val):
+    for key in val.keys():
+        if key not in User.SUPPORTED_SOCIAL_LINKS:
+            raise ValidationError("Unknown social link provider %s" % key)
 
 
 class UserManager(BaseUserManager):
@@ -93,6 +104,22 @@ class User(AbstractBaseUser, PermissionsMixin):
     new_user = models.BooleanField(verbose_name="New User", default=False)
     login_types = JSONField(default=password_login_type)
     tagline = models.CharField(max_length=255, blank=True)
+    social_links = JSONField(
+        default=default_social_links,
+        blank=True,
+        validators=[validate_social_links],
+    )
+
+    # Supported SOCIAL_LINKS for social links JSON
+    SUPPORTED_SOCIAL_LINKS = [
+        "twitter",
+        "facebook",
+        "github",
+        "stackoverflow",
+        "dribble",
+        "devto",
+        "linkedin",
+    ]
 
     # Fields settings
     EMAIL_FIELD = "email"
@@ -149,6 +176,7 @@ class DeletedUser(models.Model):
     new_user = models.BooleanField(verbose_name="New User", default=False)
     login_types = JSONField(default=password_login_type)
     tagline = models.CharField(max_length=255, blank=True)
+    social_links = JSONField(default=default_social_links)
 
     # Fields specific to DeletedUser
     old_user_id = models.UUIDField(verbose_name="Old User ID")
