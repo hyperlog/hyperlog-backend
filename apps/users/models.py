@@ -148,6 +148,7 @@ class DeletedUser(models.Model):
 
     new_user = models.BooleanField(verbose_name="New User", default=False)
     login_types = JSONField(default=password_login_type)
+    tagline = models.CharField(max_length=255, blank=True)
 
     # Fields specific to DeletedUser
     old_user_id = models.UUIDField(verbose_name="Old User ID")
