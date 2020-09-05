@@ -440,7 +440,7 @@ class GetLinkToCreatePassword(GenericResultMutation):
 
 
 class SetTagline(graphene.Mutation):
-    old = graphene.String(required=True)
+    success = graphene.Boolean(required=True)
 
     class Arguments:
         tagline = graphene.String(required=True)
@@ -448,7 +448,6 @@ class SetTagline(graphene.Mutation):
     @login_required
     def mutate(self, info, tagline):
         user = info.context.user
-        old = user.tagline
         user.tagline = tagline
 
         try:
@@ -457,7 +456,7 @@ class SetTagline(graphene.Mutation):
             raise GraphQLError(get_error_messages(e)[0])
 
         user.save()
-        return SetTagline(old=old)
+        return SetTagline(success=True)
 
 
 class Mutation(object):
