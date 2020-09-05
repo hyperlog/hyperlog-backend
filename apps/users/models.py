@@ -92,6 +92,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     new_user = models.BooleanField(verbose_name="New User", default=False)
     login_types = JSONField(default=password_login_type)
+    tagline = models.CharField(max_length=255, blank=True)
 
     # Fields settings
     EMAIL_FIELD = "email"

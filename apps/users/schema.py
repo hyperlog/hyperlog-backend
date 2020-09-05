@@ -2,6 +2,7 @@ import logging
 
 import graphene
 import graphql_jwt
+from graphql import GraphQLError
 from graphene_django import DjangoObjectType
 from graphql_jwt import signals as jwt_signals
 from graphql_jwt.decorators import login_required
@@ -44,6 +45,7 @@ class UserType(DjangoObjectType):
             "is_enrolled_for_mails",
             "new_user",
             "login_types",
+            "tagline",
             # From relations
             "profiles",
             "notifications",
@@ -437,6 +439,27 @@ class GetLinkToCreatePassword(GenericResultMutation):
         return GetLinkToCreatePassword(success=True, url=reset_url)
 
 
+class SetTagline(graphene.Mutation):
+    old = graphene.String(required=True)
+
+    class Arguments:
+        tagline = graphene.String(required=True)
+
+    @login_required
+    def mutate(self, info, tagline):
+        user = info.context.user
+        old = user.tagline
+        user.tagline = tagline
+
+        try:
+            user.full_clean()
+        except ValidationError as e:
+            raise GraphQLError(get_error_messages(e)[0])
+
+        user.save()
+        return SetTagline(old=old)
+
+
 class Mutation(object):
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()
@@ -453,3 +476,4 @@ class Mutation(object):
     change_username = ChangeUsername.Field()
     add_github_auth = AddGithubAuth.Field()
     get_link_to_create_password = GetLinkToCreatePassword.Field()
+    set_tagline = SetTagline.Field()
