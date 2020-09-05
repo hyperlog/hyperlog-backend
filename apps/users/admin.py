@@ -17,6 +17,7 @@ class UserAdmin(BaseUserAdmin):
     fieldsets = [
         ["Auth", {"fields": ["username", "password"]}],
         ["Personal info", {"fields": ["last_name", "first_name"]}],
+        ["Hyperlog Personalization", {"fields": ["tagline"]}],
         [
             "Settings",
             {
