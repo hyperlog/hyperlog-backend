@@ -32,4 +32,14 @@ class Migration(migrations.Migration):
             name='tagline',
             field=models.CharField(blank=True, max_length=255),
         ),
+        migrations.AddField(
+            model_name='deleteduser',
+            name='about_page',
+            field=models.TextField(blank=True, verbose_name='About Page'),
+        ),
+        migrations.AddField(
+            model_name='user',
+            name='about_page',
+            field=models.TextField(blank=True, verbose_name='About Page'),
+        ),
     ]

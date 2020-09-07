@@ -47,6 +47,7 @@ class UserType(DjangoObjectType):
             "login_types",
             "tagline",
             "social_links",
+            "about_page",
             # From relations
             "profiles",
             "notifications",
@@ -495,6 +496,28 @@ class SetSocialLinks(graphene.Mutation):
         return SetSocialLinks(success=True)
 
 
+class SetAboutPage(graphene.Mutation):
+    """Set the content of About page (in Markdown) for the logged in user"""
+
+    success = graphene.Boolean(required=True)
+
+    class Arguments:
+        new = graphene.String(required=True)
+
+    @login_required
+    def mutate(self, info, new):
+        user = info.context.user
+
+        user.about_page = new
+        try:
+            user.full_clean()
+        except ValidationError as e:
+            raise GraphQLError(get_error_messages(e)[0])
+
+        user.save()
+        return SetAboutPage(success=True)
+
+
 class Mutation(object):
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()
@@ -513,3 +536,4 @@ class Mutation(object):
     get_link_to_create_password = GetLinkToCreatePassword.Field()
     set_tagline = SetTagline.Field()
     set_social_links = SetSocialLinks.Field()
+    set_about_page = SetAboutPage.Field()

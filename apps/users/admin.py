@@ -33,7 +33,10 @@ class UserAdmin(BaseUserAdmin):
             },
         ],
         ["Important dates", {"fields": ["last_login", "registered_at"]}],
-        ["Hyperlog Personalization", {"fields": ["tagline", "social_links"]}],
+        [
+            "Hyperlog Personalization",
+            {"fields": ["tagline", "social_links", "about_page"]},
+        ],
     ]
     # add_fieldsets is not a standard ModelAdmin attribute. UserAdmin
     # overrides get_fieldsets to use this attribute when creating a user.
