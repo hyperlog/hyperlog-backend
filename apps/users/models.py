@@ -109,6 +109,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         blank=True,
         validators=[validate_social_links],
     )
+    about_page = models.TextField(verbose_name="About Page", blank=True)
 
     # Supported SOCIAL_LINKS for social links JSON
     SUPPORTED_SOCIAL_LINKS = [
@@ -176,7 +177,8 @@ class DeletedUser(models.Model):
     new_user = models.BooleanField(verbose_name="New User", default=False)
     login_types = JSONField(default=password_login_type)
     tagline = models.CharField(max_length=255, blank=True)
-    social_links = JSONField(default=default_social_links)
+    social_links = JSONField(default=default_social_links, blank=True)
+    about_page = models.TextField(verbose_name="About Page", blank=True)
 
     # Fields specific to DeletedUser
     old_user_id = models.UUIDField(verbose_name="Old User ID")
