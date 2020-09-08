@@ -15,8 +15,9 @@ services:
   web:
     restart: always
     env_file: .env
-    build: .
-    command: bash dev.sh
+    build:
+      context: .
+      dockerfile: Dockerfile
     volumes:
       - .:/backend
     ports:
