@@ -48,6 +48,7 @@ class UserType(DjangoObjectType):
             "tagline",
             "social_links",
             "about_page",
+            "theme_code",
             # From relations
             "profiles",
             "notifications",
@@ -518,6 +519,28 @@ class SetAboutPage(graphene.Mutation):
         return SetAboutPage(success=True)
 
 
+class SetThemeCode(graphene.Mutation):
+    """Set the theme code for the user"""
+
+    success = graphene.Boolean(required=True)
+
+    class Arguments:
+        new = graphene.String(required=True)
+
+    @login_required
+    def mutate(self, info, new):
+        user = info.context.user
+
+        user.theme_code = new
+        try:
+            user.full_clean()
+        except ValidationError as e:
+            raise GraphQLError(get_error_messages(e)[0])
+
+        user.save()
+        return SetThemeCode(success=True)
+
+
 class Mutation(object):
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()
@@ -537,3 +560,4 @@ class Mutation(object):
     set_tagline = SetTagline.Field()
     set_social_links = SetSocialLinks.Field()
     set_about_page = SetAboutPage.Field()
+    set_theme_code = SetThemeCode.Field()
