@@ -42,4 +42,9 @@ class Migration(migrations.Migration):
             name='about_page',
             field=models.TextField(blank=True, verbose_name='About Page'),
         ),
+        migrations.AddField(
+            model_name='user',
+            name='theme_code',
+            field=models.CharField(default='default', max_length=64, verbose_name='Theme Code'),
+        ),
     ]
