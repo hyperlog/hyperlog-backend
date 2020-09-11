@@ -49,6 +49,7 @@ class UserType(DjangoObjectType):
             "social_links",
             "about_page",
             "theme_code",
+            "show_avatar",
             # From relations
             "profiles",
             "notifications",
@@ -541,6 +542,26 @@ class SetThemeCode(graphene.Mutation):
         return SetThemeCode(success=True)
 
 
+class SetShowAvatar(graphene.Mutation):
+    success = graphene.Boolean(required=True)
+
+    class Arguments:
+        new = graphene.Boolean(required=True)
+
+    @login_required
+    def mutate(self, info, new):
+        user = info.context.user
+
+        user.show_avatar = new
+        try:
+            user.full_clean()
+        except ValidationError as e:
+            raise GraphQLError(get_error_messages(e)[0])
+
+        user.save()
+        return SetShowAvatar(success=True)
+
+
 class Mutation(object):
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()
@@ -561,3 +582,4 @@ class Mutation(object):
     set_social_links = SetSocialLinks.Field()
     set_about_page = SetAboutPage.Field()
     set_theme_code = SetThemeCode.Field()
+    set_show_avatar = SetShowAvatar.Field()
