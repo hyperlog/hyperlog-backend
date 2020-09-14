@@ -37,11 +37,10 @@ except AttributeError:
 
 GITHUB_SCOPES_PUBLIC_REPO = [
     "public_repo",
-    "read:user",
     "read:org",
     "user:email",
 ]
-GITHUB_SCOPES_FULL_REPO = ["repo", "read:user", "read:org", "user:email"]
+GITHUB_SCOPES_FULL_REPO = ["repo", "read:org", "user:email"]
 GITHUB_AUTHORIZATION_URL = "https://github.com/login/oauth/authorize"
 GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 
