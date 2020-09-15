@@ -43,8 +43,33 @@ class Migration(migrations.Migration):
             field=models.TextField(blank=True, verbose_name='About Page'),
         ),
         migrations.AddField(
+            model_name='deleteduser',
+            name='theme_code',
+            field=models.CharField(default='default', max_length=64, verbose_name='Theme Code'),
+        ),
+        migrations.AddField(
             model_name='user',
             name='theme_code',
             field=models.CharField(default='default', max_length=64, verbose_name='Theme Code'),
+        ),
+        migrations.AddField(
+            model_name='deleteduser',
+            name='show_avatar',
+            field=models.BooleanField(default=True, verbose_name='Display Avatar on Portfolio'),
+        ),
+        migrations.AddField(
+            model_name='user',
+            name='show_avatar',
+            field=models.BooleanField(default=True, verbose_name='Display Avatar on Portfolio'),
+        ),
+        migrations.AddField(
+            model_name='deleteduser',
+            name='under_construction',
+            field=models.BooleanField(default=True, verbose_name='Portfolio under construction'),
+        ),
+        migrations.AddField(
+            model_name='user',
+            name='under_construction',
+            field=models.BooleanField(default=True, verbose_name='Portfolio under construction'),
         ),
     ]

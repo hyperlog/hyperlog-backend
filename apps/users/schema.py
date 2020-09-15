@@ -50,6 +50,7 @@ class UserType(DjangoObjectType):
             "about_page",
             "theme_code",
             "show_avatar",
+            "under_construction",
             # From relations
             "profiles",
             "notifications",
@@ -562,6 +563,23 @@ class SetShowAvatar(graphene.Mutation):
         return SetShowAvatar(success=True)
 
 
+class MarkPortfolioAsConstructed(graphene.Mutation):
+    success = graphene.Boolean()
+
+    @login_required
+    def mutate(self, info):
+        user = info.context.user
+
+        user.under_construction = False
+        try:
+            user.full_clean()
+        except ValidationError as e:
+            raise GraphQLError(get_error_messages(e)[0])
+
+        user.save()
+        return MarkPortfolioAsConstructed(success=True)
+
+
 class Mutation(object):
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()
@@ -583,3 +601,4 @@ class Mutation(object):
     set_about_page = SetAboutPage.Field()
     set_theme_code = SetThemeCode.Field()
     set_show_avatar = SetShowAvatar.Field()
+    mark_portfolio_as_constructed = MarkPortfolioAsConstructed.Field()

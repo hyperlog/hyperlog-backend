@@ -116,6 +116,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     show_avatar = models.BooleanField(
         verbose_name="Display Avatar on Portfolio", default=True,
     )
+    under_construction = models.BooleanField(
+        verbose_name="Portfolio under construction", default=True,
+    )
 
     # Supported SOCIAL_LINKS for social links JSON
     SUPPORTED_SOCIAL_LINKS = [
@@ -185,8 +188,14 @@ class DeletedUser(models.Model):
     tagline = models.CharField(max_length=255, blank=True)
     social_links = JSONField(default=default_social_links, blank=True)
     about_page = models.TextField(verbose_name="About Page", blank=True)
+    theme_code = models.CharField(
+        verbose_name="Theme Code", max_length=64, default="default",
+    )
     show_avatar = models.BooleanField(
         verbose_name="Display Avatar on Portfolio", default=True,
+    )
+    under_construction = models.BooleanField(
+        verbose_name="Portfolio under construction", default=True,
     )
 
     # Fields specific to DeletedUser
