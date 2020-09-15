@@ -40,7 +40,9 @@ class UserAdmin(BaseUserAdmin):
                     "tagline",
                     "social_links",
                     "about_page",
+                    "theme_code",
                     "show_avatar",
+                    "under_construction",
                 ]
             },
         ],
