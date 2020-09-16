@@ -13,6 +13,7 @@ from graphql_jwt.utils import get_payload as jwt_get_payload
 
 from apps.base.middleware import (
     custom_jwt_cookie_middleware as custom_jwt_cookie,
+    jwt_verify_newest_token,
 )
 from apps.base.utils import create_model_object
 from apps.profiles.models import GithubProfile, EmailAddress
@@ -46,6 +47,7 @@ GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 
 
 @require_http_methods(["GET"])
+@jwt_verify_newest_token
 @custom_jwt_cookie
 def connect_github(request):
     """
@@ -82,6 +84,7 @@ def connect_github(request):
 
 
 @require_http_methods(["GET"])
+@jwt_verify_newest_token
 @custom_jwt_cookie
 def oauth_github(request):
     if request.user.is_authenticated:
@@ -109,6 +112,7 @@ def oauth_github(request):
 
 
 @require_http_methods(["GET"])
+@jwt_verify_newest_token
 @custom_jwt_cookie
 def oauth_github_callback(request):
     if request.user.is_anonymous:

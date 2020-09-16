@@ -194,7 +194,10 @@ STACK_OVERFLOW_KEY = env("STACK_OVERFLOW_KEY", default="")
 
 GRAPHENE = {
     "SCHEMA": "hyperlog.schema.schema",
-    "MIDDLEWARE": ["graphql_jwt.middleware.JSONWebTokenMiddleware"],
+    "MIDDLEWARE": [
+        "graphql_jwt.middleware.JSONWebTokenMiddleware",
+        "apps.base.middleware.JWTVerifyNewestTokenMiddleware",
+    ],
 }
 
 
@@ -255,6 +258,7 @@ sentry_sdk.init(
 GRAPHQL_JWT = {
     "JWT_VERIFY_EXPIRATION": True,
     "JWT_EXPIRATION_DELTA": timedelta(days=15),
+    "JWT_DECODE_HANDLER": "apps.base.jwt_conf.jwt_decode_handler",
     "JWT_PAYLOAD_HANDLER": "apps.base.jwt_conf.jwt_payload_handler",
     "JWT_PAYLOAD_GET_USERNAME_HANDLER": "apps.base.jwt_conf.jwt_payload_get_username_handler",  # noqa: E501
     "JWT_GET_USER_BY_NATURAL_KEY_HANDLER": "apps.base.jwt_conf.jwt_payload_get_user_by_natural_key_handler",  # noqa: E501
