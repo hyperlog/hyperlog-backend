@@ -7,12 +7,19 @@ from graphql_jwt import signals as jwt_signals
 from graphql_jwt.decorators import login_required
 from graphql_jwt.shortcuts import get_token
 
+from django.conf import settings
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.hashers import check_password
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db.utils import Error as DjangoDBError
 
+from apps.base.github import (
+    github_trade_code_for_token,
+    github_get_gh_id,
+    github_get_primary_email,
+    github_get_user_data,
+)
 from apps.base.schema import GenericResultMutation
 from apps.base.utils import get_error_messages
 from apps.users.models import User
@@ -21,12 +28,12 @@ from apps.users.utils import (
     delete_user as delete_user_util,
     generate_random_username,
     get_reset_password_link,
-    github_get_gh_id,
-    github_get_primary_email,
-    github_get_user_data,
-    github_trade_code_for_token,
     send_reset_password_email,
 )
+
+
+GITHUB_AUTH_CLIENT_ID = settings.GITHUB_AUTH_CLIENT_ID
+GITHUB_AUTH_CLIENT_SECRET = settings.GITHUB_AUTH_CLIENT_SECRET
 
 logger = logging.getLogger(__name__)
 
@@ -266,7 +273,9 @@ class LoginWithGithub(GenericResultMutation):
     def mutate(self, info, code):
         UserModel = get_user_model()
 
-        gh_token = github_trade_code_for_token(code)
+        gh_token = github_trade_code_for_token(
+            code, GITHUB_AUTH_CLIENT_ID, GITHUB_AUTH_CLIENT_SECRET
+        )
         if gh_token:
             # Get user details
             gh_user_data = github_get_user_data(gh_token)

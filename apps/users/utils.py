@@ -3,7 +3,6 @@ from datetime import timedelta
 from itertools import chain
 
 import botocore
-import requests
 from coolname import generate as generate_readable
 from graphql_jwt.utils import jwt_encode
 
@@ -13,7 +12,6 @@ from django.core.exceptions import ValidationError
 from django.core.mail import EmailMultiAlternatives
 from django.utils import timezone
 
-from apps.base.github import execute_github_gql_query, get_user_emails
 from apps.base.utils import (
     CreateModelResult,
     get_error_messages,
@@ -22,12 +20,6 @@ from apps.base.utils import (
 )
 from apps.users.models import DeletedUser, User
 
-GITHUB_OAUTH_ACCESS_TOKEN_URL = "https://github.com/login/oauth/access_token"
-GITHUB_AUTH_CLIENT_ID = settings.GITHUB_AUTH_CLIENT_ID
-GITHUB_AUTH_CLIENT_SECRET = settings.GITHUB_AUTH_CLIENT_SECRET
-
-GITHUB_GRAPHQL_API_URL = "https://api.github.com/graphql"
-GITHUB_REST_API_URL = "https://api.github.com"
 
 DDB_PROFILES_TABLE = settings.AWS_DDB_PROFILES_TABLE
 SNS_USER_DELETE_TOPIC = settings.AWS_SNS_USER_DELETE_TOPIC
@@ -115,94 +107,6 @@ def delete_user(user: User) -> DeletedUser:
         logger.exception("Couldn't publish user_delete SNS event")
 
     return deleted_user
-
-
-def github_trade_code_for_token(code):
-    """
-    Attempts to use GitHub OAuth to trade the Authorization code for a token.
-
-    Returns the token (str type) if it's present in GitHub's response and
-    otherwise returns None.
-
-    A None response should be interpreted as an error
-    """
-    response = requests.post(
-        GITHUB_OAUTH_ACCESS_TOKEN_URL,
-        headers={"Accept": "application/json"},
-        data={
-            "client_id": GITHUB_AUTH_CLIENT_ID,
-            "client_secret": GITHUB_AUTH_CLIENT_SECRET,
-            "code": code,
-        },
-    ).json()
-
-    return response.get("access_token")
-
-
-def github_get_user_data(token):
-    """
-    Attempts a GraphQL query to the GitHub GraphQL API to get the user details:
-    1. databaseId
-    2. login
-    3. name
-
-    Returns a dict (with keys: "databaseId", "login" and "name")
-    """
-    query = """
-    {
-      viewer {
-        databaseId
-        login
-        name
-      }
-    }
-    """
-
-    try:
-        gql_response = execute_github_gql_query(query, token)
-    except Exception:
-        logger.exception("Couldn't execute GitHub query")
-        return None
-
-    if "error" in gql_response:
-        logger.error(f"GitHub API error\n{gql_response}")
-        return None
-
-    return gql_response["data"]["viewer"]
-
-
-def github_get_gh_id(token):
-    """Gets the GitHub ID for a user"""
-    query = """
-    {
-      viewer {
-        databaseId
-      }
-    }
-    """
-
-    try:
-        response = execute_github_gql_query(query, token)
-    except Exception:
-        logger.exception("Couldn't execute GitHub query")
-        return None
-
-    if "error" in response:
-        logger.error(f"GitHub API error\n{response}")
-        return None
-
-    return response["data"]["viewer"]["databaseId"]
-
-
-def github_get_primary_email(token):
-    """Gets the primary email of the GitHub user"""
-    try:
-        emails = iter(get_user_emails(token))
-    except Exception:
-        logger.exception("Error while fetching emails from GitHub")
-        return None
-
-    return next(email["email"] for email in emails if email["primary"] is True)
 
 
 def generate_random_username():
