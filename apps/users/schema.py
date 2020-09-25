@@ -51,6 +51,7 @@ class UserType(DjangoObjectType):
             "theme_code",
             "show_avatar",
             "under_construction",
+            "setup_step",
             # From relations
             "profiles",
             "notifications",
@@ -580,6 +581,74 @@ class MarkPortfolioAsConstructed(graphene.Mutation):
         return MarkPortfolioAsConstructed(success=True)
 
 
+class NextSetupStep(graphene.Mutation):
+    new = graphene.Integer(required=True)
+
+    @login_required
+    def mutate(self, info):
+        user = info.context.user
+
+        if user.setup_step == User.SETUP_COMPLETED_STEP:
+            # If setup is already complete
+            raise GraphQLError("Setup is already completed!")
+
+        if user.setup_step >= User.MAX_SETUP_STEP:
+            # If setup is at last step
+            raise GraphQLError("Cannot go to next step! (It doesn't exist)")
+
+        # If value is in [min_step, max_step)
+        user.setup_step += 1
+
+        user.full_clean()
+        user.save()
+
+        return NextSetupStep(new=user.setup_step)
+
+
+class PreviousSetupStep(graphene.Mutation):
+    new = graphene.Integer(required=True)
+
+    @login_required
+    def mutate(self, info):
+        user = info.context.user
+
+        if user.setup_step == User.SETUP_COMPLETED_STEP:
+            # If user's setup is complete
+            raise GraphQLError("Setup is already compeleted!")
+
+        if user.setup_step <= User.MIN_SETUP_STEP:
+            # If the value is already at minimum step
+            raise GraphQLError(
+                "Cannot go to the previous step! (It doesn't exist)"
+            )
+
+        # If value is in (min_step, max_step]
+        user.setup_step -= 1
+
+        user.full_clean()
+        user.save()
+
+        return PreviousSetupStep(new=user.setup_step)
+
+
+class CompleteSetup(graphene.Mutation):
+    success = graphene.Boolean(required=True)
+
+    @login_required
+    def mutate(self, info):
+        user = info.context.user
+
+        if user.setup_step == User.SETUP_COMPLETED_STEP:
+            raise GraphQLError("Setup is already completed!")
+
+        user.setup_step = User.SETUP_COMPLETED_STEP
+
+        user.full_clean()
+        user.save()
+
+        return CompleteSetup(success=True)
+
+
 class Mutation(object):
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()
@@ -602,3 +671,6 @@ class Mutation(object):
     set_theme_code = SetThemeCode.Field()
     set_show_avatar = SetShowAvatar.Field()
     mark_portfolio_as_constructed = MarkPortfolioAsConstructed.Field()
+    next_setup_step = NextSetupStep.Field()
+    previous_setup_step = PreviousSetupStep.Field()
+    complete_setup = CompleteSetup.Field()

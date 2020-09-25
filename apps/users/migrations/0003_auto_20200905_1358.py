@@ -72,4 +72,14 @@ class Migration(migrations.Migration):
             name='under_construction',
             field=models.BooleanField(default=True, verbose_name='Portfolio under construction'),
         ),
+        migrations.AddField(
+            model_name='deleteduser',
+            name='setup_step',
+            field=models.IntegerField(default=1, verbose_name='Current setup step'),
+        ),
+        migrations.AddField(
+            model_name='user',
+            name='setup_step',
+            field=models.IntegerField(default=1, verbose_name='Current setup step'),
+        ),
     ]

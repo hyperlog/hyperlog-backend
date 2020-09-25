@@ -43,6 +43,7 @@ class UserAdmin(BaseUserAdmin):
                     "theme_code",
                     "show_avatar",
                     "under_construction",
+                    "setup_step",
                 ]
             },
         ],
