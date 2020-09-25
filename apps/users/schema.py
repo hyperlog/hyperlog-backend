@@ -582,7 +582,7 @@ class MarkPortfolioAsConstructed(graphene.Mutation):
 
 
 class NextSetupStep(graphene.Mutation):
-    new = graphene.Integer(required=True)
+    new = graphene.Int(required=True)
 
     @login_required
     def mutate(self, info):
@@ -606,7 +606,7 @@ class NextSetupStep(graphene.Mutation):
 
 
 class PreviousSetupStep(graphene.Mutation):
-    new = graphene.Integer(required=True)
+    new = graphene.Int(required=True)
 
     @login_required
     def mutate(self, info):
