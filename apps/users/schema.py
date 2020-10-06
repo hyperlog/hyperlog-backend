@@ -2,6 +2,7 @@ import logging
 
 import graphene
 import graphql_jwt
+from graphql import GraphQLError
 from graphene_django import DjangoObjectType
 from graphql_jwt import signals as jwt_signals
 from graphql_jwt.decorators import login_required
@@ -44,6 +45,13 @@ class UserType(DjangoObjectType):
             "is_enrolled_for_mails",
             "new_user",
             "login_types",
+            "tagline",
+            "social_links",
+            "about_page",
+            "theme_code",
+            "show_avatar",
+            "under_construction",
+            "setup_step",
             # From relations
             "profiles",
             "notifications",
@@ -437,6 +445,210 @@ class GetLinkToCreatePassword(GenericResultMutation):
         return GetLinkToCreatePassword(success=True, url=reset_url)
 
 
+class SetTagline(graphene.Mutation):
+    success = graphene.Boolean(required=True)
+
+    class Arguments:
+        tagline = graphene.String(required=True)
+
+    @login_required
+    def mutate(self, info, tagline):
+        user = info.context.user
+        user.tagline = tagline
+
+        try:
+            user.full_clean()
+        except ValidationError as e:
+            raise GraphQLError(get_error_messages(e)[0])
+
+        user.save()
+        return SetTagline(success=True)
+
+
+class SetSocialLinks(graphene.Mutation):
+    """
+    Give '$provider: $handle' pairs as arguments to add/update and use
+    '$provider: ""' to remove an existing social profile
+    """
+
+    success = graphene.Boolean(required=True)
+
+    @classmethod
+    def Field(cls, *args, **kwargs):
+        # Update Arguments dynamically to guarantee consistency
+        cls._meta.arguments.update(
+            [(s, graphene.String()) for s in User.SUPPORTED_SOCIAL_LINKS]
+        )
+        return super().Field(*args, **kwargs)
+
+    @login_required
+    def mutate(self, info, **kwargs):
+        user = info.context.user
+
+        for (key, val) in kwargs.items():
+            if val == "":
+                user.social_links.pop(key, None)
+            else:
+                user.social_links[key] = val
+
+        try:
+            user.full_clean()
+        except ValidationError as e:
+            raise GraphQLError(get_error_messages(e)[0])
+
+        user.save()
+        return SetSocialLinks(success=True)
+
+
+class SetAboutPage(graphene.Mutation):
+    """Set the content of About page (in Markdown) for the logged in user"""
+
+    success = graphene.Boolean(required=True)
+
+    class Arguments:
+        new = graphene.String(required=True)
+
+    @login_required
+    def mutate(self, info, new):
+        user = info.context.user
+
+        user.about_page = new
+        try:
+            user.full_clean()
+        except ValidationError as e:
+            raise GraphQLError(get_error_messages(e)[0])
+
+        user.save()
+        return SetAboutPage(success=True)
+
+
+class SetThemeCode(graphene.Mutation):
+    """Set the theme code for the user"""
+
+    success = graphene.Boolean(required=True)
+
+    class Arguments:
+        new = graphene.String(required=True)
+
+    @login_required
+    def mutate(self, info, new):
+        user = info.context.user
+
+        user.theme_code = new
+        try:
+            user.full_clean()
+        except ValidationError as e:
+            raise GraphQLError(get_error_messages(e)[0])
+
+        user.save()
+        return SetThemeCode(success=True)
+
+
+class SetShowAvatar(graphene.Mutation):
+    success = graphene.Boolean(required=True)
+
+    class Arguments:
+        new = graphene.Boolean(required=True)
+
+    @login_required
+    def mutate(self, info, new):
+        user = info.context.user
+
+        user.show_avatar = new
+        try:
+            user.full_clean()
+        except ValidationError as e:
+            raise GraphQLError(get_error_messages(e)[0])
+
+        user.save()
+        return SetShowAvatar(success=True)
+
+
+class MarkPortfolioAsConstructed(graphene.Mutation):
+    success = graphene.Boolean()
+
+    @login_required
+    def mutate(self, info):
+        user = info.context.user
+
+        user.under_construction = False
+        try:
+            user.full_clean()
+        except ValidationError as e:
+            raise GraphQLError(get_error_messages(e)[0])
+
+        user.save()
+        return MarkPortfolioAsConstructed(success=True)
+
+
+class NextSetupStep(graphene.Mutation):
+    new = graphene.Int(required=True)
+
+    @login_required
+    def mutate(self, info):
+        user = info.context.user
+
+        if user.setup_step == User.SETUP_COMPLETED_STEP:
+            # If setup is already complete
+            raise GraphQLError("Setup is already completed!")
+
+        if user.setup_step >= User.MAX_SETUP_STEP:
+            # If setup is at last step
+            raise GraphQLError("Cannot go to next step! (It doesn't exist)")
+
+        # If value is in [min_step, max_step)
+        user.setup_step += 1
+
+        user.full_clean()
+        user.save()
+
+        return NextSetupStep(new=user.setup_step)
+
+
+class PreviousSetupStep(graphene.Mutation):
+    new = graphene.Int(required=True)
+
+    @login_required
+    def mutate(self, info):
+        user = info.context.user
+
+        if user.setup_step == User.SETUP_COMPLETED_STEP:
+            # If user's setup is complete
+            raise GraphQLError("Setup is already compeleted!")
+
+        if user.setup_step <= User.MIN_SETUP_STEP:
+            # If the value is already at minimum step
+            raise GraphQLError(
+                "Cannot go to the previous step! (It doesn't exist)"
+            )
+
+        # If value is in (min_step, max_step]
+        user.setup_step -= 1
+
+        user.full_clean()
+        user.save()
+
+        return PreviousSetupStep(new=user.setup_step)
+
+
+class CompleteSetup(graphene.Mutation):
+    success = graphene.Boolean(required=True)
+
+    @login_required
+    def mutate(self, info):
+        user = info.context.user
+
+        if user.setup_step == User.SETUP_COMPLETED_STEP:
+            raise GraphQLError("Setup is already completed!")
+
+        user.setup_step = User.SETUP_COMPLETED_STEP
+
+        user.full_clean()
+        user.save()
+
+        return CompleteSetup(success=True)
+
+
 class Mutation(object):
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()
@@ -453,3 +665,12 @@ class Mutation(object):
     change_username = ChangeUsername.Field()
     add_github_auth = AddGithubAuth.Field()
     get_link_to_create_password = GetLinkToCreatePassword.Field()
+    set_tagline = SetTagline.Field()
+    set_social_links = SetSocialLinks.Field()
+    set_about_page = SetAboutPage.Field()
+    set_theme_code = SetThemeCode.Field()
+    set_show_avatar = SetShowAvatar.Field()
+    mark_portfolio_as_constructed = MarkPortfolioAsConstructed.Field()
+    next_setup_step = NextSetupStep.Field()
+    previous_setup_step = PreviousSetupStep.Field()
+    complete_setup = CompleteSetup.Field()
