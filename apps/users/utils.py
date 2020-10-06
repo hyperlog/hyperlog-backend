@@ -10,7 +10,7 @@ from graphql_jwt.utils import jwt_encode
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.utils import timezone
 
 from apps.base.github import execute_github_gql_query, get_user_emails
@@ -32,6 +32,7 @@ GITHUB_REST_API_URL = "https://api.github.com"
 DDB_PROFILES_TABLE = settings.AWS_DDB_PROFILES_TABLE
 SNS_USER_DELETE_TOPIC = settings.AWS_SNS_USER_DELETE_TOPIC
 RESET_PASSWORD_EMAIL = settings.AWS_SES_RESET_PASSWORD_EMAIL
+REPLYTO_EMAIL = settings.AWS_SES_REPLYTO_EMAIL
 
 logger = logging.getLogger(__name__)
 
@@ -259,6 +260,8 @@ def send_reset_password_email(user):
     from_email = RESET_PASSWORD_EMAIL
     to = user.email
     subject = "Reset your password"
+    reply_to = REPLYTO_EMAIL
+
     text_content = """
 Hey %(username)s,
 We just received a request to reset your Hyperlog.io password. To do that, \
@@ -273,8 +276,27 @@ Hyperlog Team
         "reset_link": url,
     }
 
+    html_content = """<img src="" alt="Hyperlog Logo">
+<p>Hey %(username)s,<br>
+We just received a request to reset your Hyperlog.io password. Feel free \
+ignore the email if it wasn't you.</p>
+
+<a href="%(reset_link)s"><button style="">Reset password here</button></a>
+
+<p>Regards,<br>
+The Hyperlog Team</p>
+""" % {
+        "username": user.username,
+        "reset_link": url,
+    }
+
+    msg = EmailMultiAlternatives(
+        subject, text_content, from_email, [to], reply_to=[reply_to]
+    )
+    msg.attach_alternative(html_content, "text/html")
+
     try:
-        send_mail(subject, text_content, from_email, [to])
+        msg.send()
     except botocore.exceptions.ClientError:
         if settings.DEBUG:  # Dev mode
             print(text_content)

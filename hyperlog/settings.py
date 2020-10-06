@@ -38,7 +38,7 @@ SECRET_KEY = env(
 DEBUG = env.bool("DEBUG", default=True)
 
 ALLOWED_HOSTS = (
-    ["gateway.hyperlog.io", "localhost"]
+    ["staging.gateway.hyperlog.io", "gateway.hyperlog.io", "localhost"]
     if DEBUG is False
     else ["*"]
 )
@@ -182,11 +182,22 @@ GITHUB_AUTH_CLIENT_ID = env("GITHUB_AUTH_CLIENT_ID", default="")
 GITHUB_AUTH_CLIENT_SECRET = env("GITHUB_AUTH_CLIENT_SECRET", default="")
 
 
+# StackOverflow OAuth / API (Stack Exchange)
+
+STACK_OVERFLOW_CLIENT_ID = env("STACK_OVERFLOW_CLIENT_ID", default="")
+STACK_OVERFLOW_CLIENT_SECRET = env("STACK_OVERFLOW_CLIENT_SECRET", default="")
+STACK_OVERFLOW_REDIRECT_URI = env("STACK_OVERFLOW_REDIRECT_URI", default="")
+STACK_OVERFLOW_KEY = env("STACK_OVERFLOW_KEY", default="")
+
+
 # GRAPHQL
 
 GRAPHENE = {
     "SCHEMA": "hyperlog.schema.schema",
-    "MIDDLEWARE": ["graphql_jwt.middleware.JSONWebTokenMiddleware"],
+    "MIDDLEWARE": [
+        "graphql_jwt.middleware.JSONWebTokenMiddleware",
+        "apps.base.middleware.JWTVerifyNewestTokenMiddleware",
+    ],
 }
 
 
@@ -220,6 +231,7 @@ AWS_DDB_PROFILE_ANALYSIS_TABLE = (
 
 AWS_SES_REGION_ENDPOINT = f"email.{AWS_DEFAULT_REGION}.amazonaws.com"
 AWS_SES_RESET_PASSWORD_EMAIL = "Hyperlog Support <support@hyperlog.io>"
+AWS_SES_REPLYTO_EMAIL = "Aditya from Hyperlog <aditya@hyperlog.io>"
 
 AWS_SNS_PROFILE_ANALYSIS_TOPIC = (
     env("AWS_SNS_PROFILE_ANALYSIS_TOPIC", default="RepoAnalysis")
@@ -246,6 +258,7 @@ sentry_sdk.init(
 GRAPHQL_JWT = {
     "JWT_VERIFY_EXPIRATION": True,
     "JWT_EXPIRATION_DELTA": timedelta(days=15),
+    "JWT_DECODE_HANDLER": "apps.base.jwt_conf.jwt_decode_handler",
     "JWT_PAYLOAD_HANDLER": "apps.base.jwt_conf.jwt_payload_handler",
     "JWT_PAYLOAD_GET_USERNAME_HANDLER": "apps.base.jwt_conf.jwt_payload_get_username_handler",  # noqa: E501
     "JWT_GET_USER_BY_NATURAL_KEY_HANDLER": "apps.base.jwt_conf.jwt_payload_get_user_by_natural_key_handler",  # noqa: E501

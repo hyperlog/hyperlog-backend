@@ -7,6 +7,7 @@ from django.contrib.auth.models import (
 )
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.contrib.postgres.fields import JSONField
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -15,6 +16,23 @@ from apps.base.models import CICharField, CIEmailField
 
 def password_login_type():
     return {"password": True}
+
+
+def default_social_links():
+    return {}
+
+
+def validate_social_links(val):
+    for key in val.keys():
+        if key not in User.SUPPORTED_SOCIAL_LINKS:
+            raise ValidationError("Unknown social link provider %s" % key)
+
+
+def validate_setup_step(val):
+    if val != User.SETUP_COMPLETED_STEP and (
+        val < User.MIN_SETUP_STEP or val > User.MAX_SETUP_STEP
+    ):
+        raise ValidationError(f"Invalid value for setup step {val}")
 
 
 class UserManager(BaseUserManager):
@@ -59,6 +77,15 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
+    """
+    `setup_step` field: Can be between 0 to 4, such that:
+    0 - All steps completed
+    1 - User signed up
+    2 - User has completed all connections
+    3 - User has added all required information
+    4 - User has connected the required repositories
+    """
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = CICharField(
         verbose_name="Username",
@@ -92,6 +119,40 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     new_user = models.BooleanField(verbose_name="New User", default=False)
     login_types = JSONField(default=password_login_type)
+    tagline = models.CharField(max_length=255, blank=True)
+    social_links = JSONField(
+        default=default_social_links,
+        blank=True,
+        validators=[validate_social_links],
+    )
+    about_page = models.TextField(verbose_name="About Page", blank=True)
+    theme_code = models.CharField(
+        verbose_name="Theme Code", max_length=64, default="default",
+    )
+    show_avatar = models.BooleanField(
+        verbose_name="Display Avatar on Portfolio", default=True,
+    )
+    under_construction = models.BooleanField(
+        verbose_name="Portfolio under construction", default=True,
+    )
+    setup_step = models.IntegerField(
+        verbose_name="Current setup step", default=1
+    )
+
+    # Supported SOCIAL_LINKS for social links JSON
+    SUPPORTED_SOCIAL_LINKS = [
+        "twitter",
+        "facebook",
+        "github",
+        "stackoverflow",
+        "dribble",
+        "devto",
+        "linkedin",
+    ]
+
+    SETUP_COMPLETED_STEP = 0
+    MIN_SETUP_STEP = 1
+    MAX_SETUP_STEP = 4
 
     # Fields settings
     EMAIL_FIELD = "email"
@@ -147,6 +208,21 @@ class DeletedUser(models.Model):
 
     new_user = models.BooleanField(verbose_name="New User", default=False)
     login_types = JSONField(default=password_login_type)
+    tagline = models.CharField(max_length=255, blank=True)
+    social_links = JSONField(default=default_social_links, blank=True)
+    about_page = models.TextField(verbose_name="About Page", blank=True)
+    theme_code = models.CharField(
+        verbose_name="Theme Code", max_length=64, default="default",
+    )
+    show_avatar = models.BooleanField(
+        verbose_name="Display Avatar on Portfolio", default=True,
+    )
+    under_construction = models.BooleanField(
+        verbose_name="Portfolio under construction", default=True,
+    )
+    setup_step = models.IntegerField(
+        verbose_name="Current setup step", default=1
+    )
 
     # Fields specific to DeletedUser
     old_user_id = models.UUIDField(verbose_name="Old User ID")
