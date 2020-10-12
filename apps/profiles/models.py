@@ -198,3 +198,18 @@ class ProfileAnalysis(models.Model):
     @property
     def has_valid_user(self):
         return True if self.user or self.deleted_user else False
+
+
+class OutsiderMessage(models.Model):
+    """A message sent from a non-Hyperlog user to a Hyperlog user"""
+
+    sender_name = models.CharField(max_length=40)
+    sender_email = models.EmailField()
+    message = models.TextField()
+    receiver = models.ForeignKey(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="outsider_messages",
+    )
+    time = models.DateTimeField(auto_now_add=True)
+    is_archived = models.BooleanField()

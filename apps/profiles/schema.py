@@ -4,6 +4,7 @@ import botocore
 import graphene
 import requests
 from graphene_django import DjangoObjectType
+from graphql import GraphQLError
 from graphql_jwt.decorators import staff_member_required, login_required
 
 from django.conf import settings
@@ -13,12 +14,15 @@ from apps.profiles.models import (
     BaseProfileModel,
     EmailAddress,
     Notification,
+    OutsiderMessage,
     ProfileAnalysis,
     StackOverflowProfile,
 )
 from apps.base.schema import GenericResultMutation
 from apps.base.utils import (
     create_model_object,
+    full_clean_and_save,
+    get_error_message,
     get_error_messages,
     get_model_object,
 )
@@ -67,6 +71,11 @@ class NotificationType(DjangoObjectType):
 class StackOverflowProfileType(DjangoObjectType):
     class Meta:
         model = StackOverflowProfile
+
+
+class OutsiderMessageType(DjangoObjectType):
+    class Meta:
+        model = OutsiderMessage
 
 
 class Query(graphene.ObjectType):
@@ -285,9 +294,40 @@ class ConnectStackOverflow(GenericResultMutation):
             )
 
 
+class ToggleArchiveOutsiderMessage(graphene.Mutation):
+    """
+    Archive a message by its ID.
+    The message should belong to the logged in user (sent to that user)
+    """
+
+    new = graphene.Boolean(required=True)
+
+    class Arguments:
+        id = graphene.Int(required=True)
+
+    @login_required
+    def mutate(self, info, id):
+        user = info.context.user
+
+        try:
+            msg = user.outsider_messages.get(id=id)
+        except OutsiderMessage.DoesNotExist:
+            raise GraphQLError("Message not found")
+
+        msg.is_archived = not msg.is_archived
+
+        # In python 3.8 -> if (err := full_clean_and_save(...)) is not None:
+        err = full_clean_and_save(msg)
+        if err is not None:
+            raise GraphQLError(get_error_message(err))
+
+        return ToggleArchiveOutsiderMessage(new=msg.is_archived)
+
+
 class Mutation(graphene.ObjectType):
     delete_github_profile = DeleteGithubProfile.Field()
     create_notification = CreateNotification.Field()
     mark_notification_as_read = MarkNotificationAsRead.Field()
     select_repos = SelectRepos.Field()
     connect_stackoverflow = ConnectStackOverflow.Field()
+    toggle_archive_outsider_message = ToggleArchiveOutsiderMessage.Field()
