@@ -9,6 +9,7 @@ from graphql_jwt.decorators import staff_member_required, login_required
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.paginator import Paginator
 
 from apps.profiles.models import (
     BaseProfileModel,
@@ -78,6 +79,11 @@ class OutsiderMessageType(DjangoObjectType):
         model = OutsiderMessage
 
 
+class PaginatedOutsiderMessagesType(graphene.ObjectType):
+    messages = graphene.List(OutsiderMessageType, required=True)
+    count = graphene.Int(required=True)
+
+
 class Query(graphene.ObjectType):
     profile = graphene.Field(ProfileType, id=graphene.Int(required=True))
 
@@ -88,6 +94,12 @@ class Query(graphene.ObjectType):
 
     profile_analyses_used = graphene.Int(
         description="The number of profile analyses used by the user"
+    )
+
+    outsider_messages = graphene.Field(
+        PaginatedOutsiderMessagesType,
+        page=graphene.Int(required=True),
+        on_each_page=graphene.Int(default_value=10),
     )
 
     def resolve_notification(self, info, **kwargs):
@@ -110,6 +122,16 @@ class Query(graphene.ObjectType):
             dynamodb_get_profile(info.context.user.id)
         )
         return user_profile["turn"]
+
+    @login_required
+    def resolve_outsider_messages(self, info, page, on_each_page):
+        user = info.context.user
+        messages = user.outsider_messages.all()
+
+        pag = Paginator(messages, on_each_page)
+        return PaginatedOutsiderMessagesType(
+            messages=pag.page(page).object_list, count=pag.count
+        )
 
 
 class DeleteGithubProfile(GenericResultMutation):

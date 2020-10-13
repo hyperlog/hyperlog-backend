@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('sender_name', models.CharField(max_length=40)),
                 ('sender_email', models.EmailField(max_length=254)),
-                ('message', models.TextField()),
+                ('text', models.TextField()),
                 ('time', models.DateTimeField(auto_now_add=True)),
                 ('is_archived', models.BooleanField()),
                 ('receiver', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='outsider_messages', to=settings.AUTH_USER_MODEL)),

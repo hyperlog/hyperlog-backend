@@ -205,7 +205,7 @@ class OutsiderMessage(models.Model):
 
     sender_name = models.CharField(max_length=40)
     sender_email = models.EmailField()
-    message = models.TextField()
+    text = models.TextField()
     receiver = models.ForeignKey(
         "users.User",
         on_delete=models.CASCADE,
