@@ -82,6 +82,7 @@ class OutsiderMessageType(DjangoObjectType):
 class PaginatedOutsiderMessagesType(graphene.ObjectType):
     messages = graphene.List(OutsiderMessageType, required=True)
     count = graphene.Int(required=True)
+    pages = graphene.Int(required=True)
 
 
 class Query(graphene.ObjectType):
@@ -100,6 +101,8 @@ class Query(graphene.ObjectType):
         PaginatedOutsiderMessagesType,
         page=graphene.Int(required=True),
         on_each_page=graphene.Int(default_value=10),
+        order_by=graphene.List(graphene.String),
+        is_archived=graphene.Boolean(),
     )
 
     def resolve_notification(self, info, **kwargs):
@@ -124,13 +127,17 @@ class Query(graphene.ObjectType):
         return user_profile["turn"]
 
     @login_required
-    def resolve_outsider_messages(self, info, page, on_each_page):
+    def resolve_outsider_messages(
+        self, info, page, on_each_page=10, order_by=["time"], **filters
+    ):
         user = info.context.user
-        messages = user.outsider_messages.all()
+        messages = user.outsider_messages.filter(**filters).order_by(*order_by)
 
         pag = Paginator(messages, on_each_page)
         return PaginatedOutsiderMessagesType(
-            messages=pag.page(page).object_list, count=pag.count
+            messages=pag.page(page).object_list,
+            count=pag.count,
+            pages=pag.num_pages,
         )
 
 
