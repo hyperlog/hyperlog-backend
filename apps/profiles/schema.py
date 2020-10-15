@@ -101,7 +101,7 @@ class Query(graphene.ObjectType):
         PaginatedOutsiderMessagesType,
         page=graphene.Int(required=True),
         on_each_page=graphene.Int(default_value=10),
-        order_by=graphene.List(graphene.String),
+        order_by=graphene.List(graphene.String, default_value=["-time"]),
         is_archived=graphene.Boolean(),
     )
 
@@ -128,7 +128,7 @@ class Query(graphene.ObjectType):
 
     @login_required
     def resolve_outsider_messages(
-        self, info, page, on_each_page=10, order_by=["time"], **filters
+        self, info, page, on_each_page, order_by, **filters
     ):
         user = info.context.user
         messages = user.outsider_messages.filter(**filters).order_by(*order_by)
