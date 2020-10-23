@@ -18,6 +18,7 @@ from apps.profiles.models import (
     OutsiderMessage,
     ProfileAnalysis,
     StackOverflowProfile,
+    ContactInfo,
 )
 from apps.base.schema import GenericResultMutation
 from apps.base.utils import (
@@ -83,6 +84,11 @@ class PaginatedOutsiderMessagesType(graphene.ObjectType):
     messages = graphene.List(OutsiderMessageType, required=True)
     count = graphene.Int(required=True)
     pages = graphene.Int(required=True)
+
+
+class ContactInfoType(DjangoObjectType):
+    class Meta:
+        model = ContactInfo
 
 
 class Query(graphene.ObjectType):
@@ -353,6 +359,36 @@ class ToggleArchiveOutsiderMessage(graphene.Mutation):
         return ToggleArchiveOutsiderMessage(new=msg.is_archived)
 
 
+class AddContactInfo(graphene.Mutation):
+    contact_info = graphene.Field(ContactInfoType, required=True)
+
+    class Arguments:
+        email = graphene.String()
+        phone = graphene.String()
+        address = graphene.String()
+
+    @login_required
+    def mutate(self, info, **args):
+        user = info.context.user
+
+        if getattr(user, "contact_info", False):
+            ci = user.contact_info
+            for (key, val) in args.items():
+                setattr(ci, key, val)
+
+            err = full_clean_and_save(ci)
+            if err is not None:
+                raise GraphQLError(get_error_message(err))
+        else:
+            contact_info = create_model_object(ContactInfo, user=user, **args)
+            if contact_info.success:
+                ci = contact_info.object
+            else:
+                raise GraphQLError(contact_info.errors[0])
+
+        return AddContactInfo(contact_info=ci)
+
+
 class Mutation(graphene.ObjectType):
     delete_github_profile = DeleteGithubProfile.Field()
     create_notification = CreateNotification.Field()
@@ -360,3 +396,4 @@ class Mutation(graphene.ObjectType):
     select_repos = SelectRepos.Field()
     connect_stackoverflow = ConnectStackOverflow.Field()
     toggle_archive_outsider_message = ToggleArchiveOutsiderMessage.Field()
+    add_contact_info = AddContactInfo.Field()
