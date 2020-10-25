@@ -2,6 +2,7 @@ import logging
 
 import botocore
 import graphene
+import phonenumbers
 import requests
 from graphene_django import DjangoObjectType
 from graphql import GraphQLError
@@ -374,6 +375,14 @@ class AddContactInfo(graphene.Mutation):
         if getattr(user, "contact_info", False):
             ci = user.contact_info
             for (key, val) in args.items():
+                if key == "phone":
+                    try:
+                        pn = phonenumbers.parse(val)
+                    except phonenumbers.phonenumberutil.NumberParseException as e:  # noqa: E501
+                        raise GraphQLError(str(e))
+
+                    val = f"{'+' + pn.country_code + ' ' if pn.country_code else ''}{'0' * (pn.number_of_leading_zeros or 0)}{pn.national_number}"  # noqa: E501
+
                 setattr(ci, key, val)
 
             err = full_clean_and_save(ci)

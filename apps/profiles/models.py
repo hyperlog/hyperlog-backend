@@ -1,5 +1,4 @@
 import logging
-import re
 
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import JSONField
@@ -11,11 +10,6 @@ from django.utils import timezone
 from apps.users.models import DeletedUser
 
 logger = logging.getLogger(__name__)
-
-
-def validate_phone_number(value):
-    if re.match(r"^[0-9]*$", value) is None:
-        raise ValidationError("Phone number should only contain digits 0-9")
 
 
 class EmailAddress(models.Model):
@@ -223,7 +217,10 @@ class OutsiderMessage(models.Model):
 
 class ContactInfo(models.Model):
     """Public contact info for a user"""
-    user = models.OneToOneField("users.User", on_delete=models.CASCADE, related_name="contact_info")
+
+    user = models.OneToOneField(
+        "users.User", on_delete=models.CASCADE, related_name="contact_info"
+    )
     email = models.EmailField(max_length=255, blank=True, default="")
-    phone = models.CharField(max_length=13, blank=True, default="", validators=[validate_phone_number])
+    phone = models.CharField(max_length=100, blank=True, default="")
     address = models.CharField(max_length=255, blank=True, default="")
