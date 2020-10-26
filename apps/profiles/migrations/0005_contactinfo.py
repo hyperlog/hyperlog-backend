@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('email', models.EmailField(blank=True, default='', max_length=255)),
-                ('phone', models.CharField(blank=True, default='', max_length=100)),
+                ('phone', models.CharField(blank=True, default='', max_length=25)),
                 ('address', models.CharField(blank=True, default='', max_length=255)),
                 ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='contact_info', to=settings.AUTH_USER_MODEL)),
             ],

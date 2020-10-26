@@ -222,5 +222,5 @@ class ContactInfo(models.Model):
         "users.User", on_delete=models.CASCADE, related_name="contact_info"
     )
     email = models.EmailField(max_length=255, blank=True, default="")
-    phone = models.CharField(max_length=100, blank=True, default="")
+    phone = models.CharField(max_length=25, blank=True, default="")
     address = models.CharField(max_length=255, blank=True, default="")
