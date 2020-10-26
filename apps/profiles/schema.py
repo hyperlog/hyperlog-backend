@@ -2,23 +2,30 @@ import logging
 
 import botocore
 import graphene
+import phonenumbers
 import requests
 from graphene_django import DjangoObjectType
+from graphql import GraphQLError
 from graphql_jwt.decorators import staff_member_required, login_required
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.paginator import Paginator
 
 from apps.profiles.models import (
     BaseProfileModel,
     EmailAddress,
     Notification,
+    OutsiderMessage,
     ProfileAnalysis,
     StackOverflowProfile,
+    ContactInfo,
 )
 from apps.base.schema import GenericResultMutation
 from apps.base.utils import (
     create_model_object,
+    full_clean_and_save,
+    get_error_message,
     get_error_messages,
     get_model_object,
 )
@@ -69,6 +76,22 @@ class StackOverflowProfileType(DjangoObjectType):
         model = StackOverflowProfile
 
 
+class OutsiderMessageType(DjangoObjectType):
+    class Meta:
+        model = OutsiderMessage
+
+
+class PaginatedOutsiderMessagesType(graphene.ObjectType):
+    messages = graphene.List(OutsiderMessageType, required=True)
+    count = graphene.Int(required=True)
+    pages = graphene.Int(required=True)
+
+
+class ContactInfoType(DjangoObjectType):
+    class Meta:
+        model = ContactInfo
+
+
 class Query(graphene.ObjectType):
     profile = graphene.Field(ProfileType, id=graphene.Int(required=True))
 
@@ -79,6 +102,14 @@ class Query(graphene.ObjectType):
 
     profile_analyses_used = graphene.Int(
         description="The number of profile analyses used by the user"
+    )
+
+    outsider_messages = graphene.Field(
+        PaginatedOutsiderMessagesType,
+        page=graphene.Int(required=True),
+        on_each_page=graphene.Int(default_value=10),
+        order_by=graphene.List(graphene.String, default_value=["-time"]),
+        is_archived=graphene.Boolean(),
     )
 
     def resolve_notification(self, info, **kwargs):
@@ -101,6 +132,20 @@ class Query(graphene.ObjectType):
             dynamodb_get_profile(info.context.user.id)
         )
         return user_profile["turn"]
+
+    @login_required
+    def resolve_outsider_messages(
+        self, info, page, on_each_page, order_by, **filters
+    ):
+        user = info.context.user
+        messages = user.outsider_messages.filter(**filters).order_by(*order_by)
+
+        pag = Paginator(messages, on_each_page)
+        return PaginatedOutsiderMessagesType(
+            messages=pag.page(page).object_list,
+            count=pag.count,
+            pages=pag.num_pages,
+        )
 
 
 class DeleteGithubProfile(GenericResultMutation):
@@ -285,9 +330,81 @@ class ConnectStackOverflow(GenericResultMutation):
             )
 
 
+class ToggleArchiveOutsiderMessage(graphene.Mutation):
+    """
+    Archive a message by its ID.
+    The message should belong to the logged in user (sent to that user)
+    """
+
+    new = graphene.Boolean(required=True)
+
+    class Arguments:
+        id = graphene.Int(required=True)
+
+    @login_required
+    def mutate(self, info, id):
+        user = info.context.user
+
+        try:
+            msg = user.outsider_messages.get(id=id)
+        except OutsiderMessage.DoesNotExist:
+            raise GraphQLError("Message not found")
+
+        msg.is_archived = not msg.is_archived
+
+        # In python 3.8 -> if (err := full_clean_and_save(...)) is not None:
+        err = full_clean_and_save(msg)
+        if err is not None:
+            raise GraphQLError(get_error_message(err))
+
+        return ToggleArchiveOutsiderMessage(new=msg.is_archived)
+
+
+class AddContactInfo(graphene.Mutation):
+    contact_info = graphene.Field(ContactInfoType, required=True)
+
+    class Arguments:
+        email = graphene.String()
+        phone = graphene.String()
+        address = graphene.String()
+
+    @login_required
+    def mutate(self, info, **args):
+        user = info.context.user
+
+        if getattr(user, "contact_info", False):
+            ci = user.contact_info
+            for (key, val) in args.items():
+                if key == "phone":
+                    try:
+                        pn = phonenumbers.parse(val)
+                    except phonenumbers.phonenumberutil.NumberParseException as e:  # noqa: E501
+                        raise GraphQLError(str(e))
+
+                    val = phonenumbers.format_number(
+                        pn, phonenumbers.PhoneNumberFormat.INTERNATIONAL
+                    )
+
+                setattr(ci, key, val)
+
+            err = full_clean_and_save(ci)
+            if err is not None:
+                raise GraphQLError(get_error_message(err))
+        else:
+            contact_info = create_model_object(ContactInfo, user=user, **args)
+            if contact_info.success:
+                ci = contact_info.object
+            else:
+                raise GraphQLError(contact_info.errors[0])
+
+        return AddContactInfo(contact_info=ci)
+
+
 class Mutation(graphene.ObjectType):
     delete_github_profile = DeleteGithubProfile.Field()
     create_notification = CreateNotification.Field()
     mark_notification_as_read = MarkNotificationAsRead.Field()
     select_repos = SelectRepos.Field()
     connect_stackoverflow = ConnectStackOverflow.Field()
+    toggle_archive_outsider_message = ToggleArchiveOutsiderMessage.Field()
+    add_contact_info = AddContactInfo.Field()

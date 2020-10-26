@@ -109,6 +109,14 @@ def get_error_messages(error: Exception) -> typing.List[str]:
     return getattr(error, "messages", [get_error_message(error)])
 
 
+def full_clean_and_save(obj: models.Model) -> typing.Union[Exception, None]:
+    try:
+        obj.full_clean()
+        obj.save()
+    except ValidationError as e:
+        return e
+
+
 # General AWS utils
 
 
