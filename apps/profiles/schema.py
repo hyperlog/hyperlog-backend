@@ -381,7 +381,7 @@ class AddContactInfo(graphene.Mutation):
                     except phonenumbers.phonenumberutil.NumberParseException as e:  # noqa: E501
                         raise GraphQLError(str(e))
 
-                    val = f"{'+' + pn.country_code + ' ' if pn.country_code else ''}{'0' * (pn.number_of_leading_zeros or 0)}{pn.national_number}"  # noqa: E501
+                    val = f"+{pn.country_code} {'0' * (pn.number_of_leading_zeros or 0)}{pn.national_number}"  # noqa: E501
 
                 setattr(ci, key, val)
 
