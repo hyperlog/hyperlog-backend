@@ -15,7 +15,7 @@ from django.core.validators import validate_email
 from django.db.utils import Error as DjangoDBError
 
 from apps.base.schema import GenericResultMutation
-from apps.base.utils import get_error_messages
+from apps.base.utils import get_error_messages, get_model_object
 from apps.users.models import User
 from apps.users.utils import (
     create_user as create_user_util,
@@ -63,6 +63,9 @@ class UserType(DjangoObjectType):
 class Query(graphene.ObjectType):
     user = graphene.Field(UserType, id=graphene.String(required=True))
     this_user = graphene.Field(UserType)
+    is_user_contactable = graphene.Boolean(
+        username=graphene.String(required=True)
+    )
 
     @staticmethod
     def resolve_user(cls, info, **kwargs):
@@ -73,6 +76,14 @@ class Query(graphene.ObjectType):
     def resolve_this_user(cls, info, **kwargs):
         if info.context.user.is_authenticated:
             return info.context.user
+
+    def resolve_is_user_contactable(self, info, username):
+        UserModel = get_user_model()
+        get_user = get_model_object(UserModel, username=username)
+        if get_user.success and not get_user.object.under_construction:
+            return True
+        else:
+            return False
 
 
 class Login(graphql_jwt.JSONWebTokenMutation):
