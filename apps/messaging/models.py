@@ -9,17 +9,19 @@ class TelegramUser(models.Model):
     last_name = models.CharField(max_length=64, blank=True, null=True)
 
 
-class MessageFromTelegram(models.Model):
-    telegram_message_id = models.IntegerField()  # message id
-    receiver = models.ForeignKey(
+class TelegramMessage(models.Model):
+    tg_message_id = models.IntegerField()  # message id
+    hl_user = models.ForeignKey(
         "users.User",
-        related_name="received_messages_from_tg",
+        related_name="tg_messages",
         on_delete=models.SET(get_sentinel_user),
     )
-    sender = models.ForeignKey(
-        TelegramUser,
-        related_name="sent_messages",
+    tg_user = models.ForeignKey(
+        "messaging.TelegramUser",
+        related_name="tg_messages",
         on_delete=models.SET(get_sentinel_user),
     )
+    # Whether message is being sent or received
+    is_outgoing = models.BooleanField(default=False)
     text = models.TextField()
     time = models.DateTimeField(auto_now_add=True)

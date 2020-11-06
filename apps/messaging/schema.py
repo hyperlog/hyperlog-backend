@@ -2,12 +2,14 @@ import logging
 
 import graphene
 from graphql import GraphQLError
+from graphql_jwt.decorators import login_required
 
 from django.contrib.auth import get_user_model
 
 from apps.base.telegram import telegram_bot_required
 from apps.base.utils import create_model_object, get_model_object
-from apps.messaging.models import MessageFromTelegram, TelegramUser
+from apps.messaging.models import TelegramMessage, TelegramUser
+from apps.messaging.telegram import send_tg_message
 
 
 logger = logging.getLogger(__name__)
@@ -44,13 +46,12 @@ class MessageHyperlogUserFromTelegram(graphene.Mutation):
 
     @telegram_bot_required
     def mutate(self, info, to, chat_id, msg_id, text):
-        print(msg_id)
         UserModel = get_user_model()
-        sender = get_model_object(TelegramUser, id=chat_id)
-        if sender.success:
-            sender = sender.object
+        tg_user = get_model_object(TelegramUser, id=chat_id)
+        if tg_user.success:
+            tg_user = tg_user.object
         else:
-            logger.error(sender.errors)
+            logger.error(tg_user.errors)
             raise GraphQLError(
                 "Something went wrong! Have you registered with Hyperlog's "
                 "Telegram OAuth? You can do it from the 'Get in Touch' section"
@@ -58,21 +59,22 @@ class MessageHyperlogUserFromTelegram(graphene.Mutation):
                 "(e.g. https://kaustubh.hyperlog.dev/)"
             )
 
-        receiver = get_model_object(UserModel, username=to)
-        if receiver.success:
-            receiver = receiver.object
+        hl_user = get_model_object(UserModel, username=to)
+        if hl_user.success:
+            hl_user = hl_user.object
         else:
-            logger.error(receiver.errors)
+            logger.error(hl_user.errors)
             raise GraphQLError(
                 "I couldn't find the person you want to reach out to. "
                 "Maybe they recently deleted their Hyperlog account."
             )
 
         msg_create = create_model_object(
-            MessageFromTelegram,
-            telegram_message_id=msg_id,
-            receiver=receiver,
-            sender=sender,
+            TelegramMessage,
+            tg_message_id=msg_id,
+            hl_user=hl_user,
+            tg_user=tg_user,
+            is_outgoing=False,
             text=text,
         )
         if msg_create.success:
@@ -83,8 +85,31 @@ class MessageHyperlogUserFromTelegram(graphene.Mutation):
             raise GraphQLError(msg_create.errors)
 
 
+class MessageTelegramUserFromHyperlog(graphene.Mutation):
+    message_id = graphene.Int(required=True)
+
+    class Arguments:
+        tg_user_id = graphene.String(required=True)  # Chat id
+        text = graphene.String(required=True)
+
+    @login_required
+    def mutate(self, info, tg_user_id, text):
+        tg_user = get_model_object(TelegramUser, id=tg_user_id)
+        if tg_user.success:
+            tg_user = tg_user.object
+        else:
+            raise GraphQLError(tg_user.errors[0])
+
+        hl_user = info.context.user
+        resp = send_tg_message(hl_user, tg_user, text)
+        return MessageTelegramUserFromHyperlog(message_id=resp.id)
+
+
 class Mutation(graphene.ObjectType):
     register_telegram_user = RegisterTelegramUser.Field()
     message_hyperlog_user_from_telegram = (
         MessageHyperlogUserFromTelegram.Field()
+    )
+    message_telegram_user_from_hyperlog = (
+        MessageTelegramUserFromHyperlog.Field()
     )
