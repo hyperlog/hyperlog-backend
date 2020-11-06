@@ -22,7 +22,6 @@ from apps.base.utils import (
     get_error_messages,
     get_model_object,
 )
-from apps.profiles.telegram import MessageHyperlogUserFromTelegram
 from apps.profiles.utils import (
     dynamodb_add_selected_repos_to_profile_analysis_table,
     dynamodb_convert_boto_dict_to_python_dict,
@@ -292,6 +291,3 @@ class Mutation(graphene.ObjectType):
     mark_notification_as_read = MarkNotificationAsRead.Field()
     select_repos = SelectRepos.Field()
     connect_stackoverflow = ConnectStackOverflow.Field()
-    message_hyperlog_user_from_telegram = (
-        MessageHyperlogUserFromTelegram.Field()
-    )
