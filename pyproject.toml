@@ -28,6 +28,7 @@ sentry-sdk = "^0.16.1"
 whitenoise = {extras = ["brotli"], version = "^5.1.0"}
 django-ses = "^1.0.1"
 coolname = "^1.1.0"
+phonenumberslite = "^8.12.11"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.8.2"

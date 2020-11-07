@@ -57,6 +57,8 @@ class UserType(DjangoObjectType):
             "notifications",
             "widget",
             "stack_overflow",
+            "outsider_messages",
+            "contact_info",
         ]
 
 

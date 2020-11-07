@@ -122,6 +122,14 @@ def get_sentinel_user():
     )
 
 
+def full_clean_and_save(obj: models.Model) -> typing.Union[Exception, None]:
+    try:
+        obj.full_clean()
+        obj.save()
+    except ValidationError as e:
+        return e
+
+
 # General AWS utils
 
 
