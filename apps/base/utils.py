@@ -3,6 +3,7 @@ import typing
 
 import boto3
 
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import models
 
@@ -107,6 +108,18 @@ def get_error_messages(error: Exception) -> typing.List[str]:
     This method handles both the cases and returns a list of error(s).
     """
     return getattr(error, "messages", [get_error_message(error)])
+
+
+def get_sentinel_user():
+    return get_user_model().get_or_create(
+        username="ghost",
+        defaults={
+            "first_name": "deleted",
+            "last_name": "user",
+            "email": "ghost@hyperlog.io",
+            "password": None,  # Unusable password
+        },
+    )
 
 
 def full_clean_and_save(obj: models.Model) -> typing.Union[Exception, None]:

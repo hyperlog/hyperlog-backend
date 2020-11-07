@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "apps.users",
     "apps.profiles",
     "apps.widgets",
+    "apps.messaging",
 ]
 
 MIDDLEWARE = [
@@ -268,3 +269,11 @@ GRAPHQL_JWT = {
 # JWT
 
 JWT_CUSTOM_COOKIE_MIDDLEWARE_MAX_AGE = 30  # seconds
+
+
+# Telegram
+
+TG_BOT_SOURCE = env("TG_BOT_SOURCE")
+TG_TOKEN_HASH = env("TG_TOKEN_HASH")
+TG_AUTH_SECRET = env("TG_AUTH_SECRET")
+TG_BOT_ENDPOINT = env("TG_BOT_ENDPOINT")
