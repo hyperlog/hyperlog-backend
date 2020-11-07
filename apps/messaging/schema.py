@@ -1,6 +1,7 @@
 import logging
 
 import graphene
+from graphene_django import DjangoObjectType
 from graphql import GraphQLError
 from graphql_jwt.decorators import login_required
 
@@ -15,8 +16,35 @@ from apps.messaging.telegram import send_tg_message
 logger = logging.getLogger(__name__)
 
 
+class TelegramMessageType(DjangoObjectType):
+    class Meta:
+        model = TelegramMessage
+
+
+class TelegramUserType(DjangoObjectType):
+    class Meta:
+        model = TelegramUser
+
+
 class Query(graphene.ObjectType):
-    pass
+    tg_messages = graphene.List(
+        TelegramMessageType,
+        tg_id=graphene.String(required=True),
+        top=graphene.Int(default_value=20),
+    )
+
+    @login_required
+    def resolve_tg_messages(self, info, tg_id, top):
+        try:
+            tg_user = TelegramUser.objects.get(id=tg_id)
+        except TelegramUser.DoesNotExist:
+            raise GraphQLError("Invalid telegram id")
+
+        hl_user = info.context.user
+        qs = TelegramMessage.objects.filter(
+            hl_user=hl_user, tg_user=tg_user
+        ).order_by("-time")
+        return list(qs[: min(top, len(qs))])
 
 
 class RegisterTelegramUser(graphene.Mutation):
