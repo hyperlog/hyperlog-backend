@@ -19,15 +19,15 @@ class Post(models.Model):
         (UNLISTED, "unlisted"),
     ]
 
+    uuid = models.UUIDField(
+        primary_key=True, default=uuid.uuid4, editable=False
+    )
     author = models.ForeignKey(
         "users.User",
         on_delete=models.SET(get_sentinel_user),
         related_name="blog_posts",
     )
     slug = models.CharField(max_length=100)
-    uuid = models.UUIDField(
-        primary_key=True, default=uuid.uuid4, editable=False
-    )
     title = models.CharField(max_length=100)
     subtitle = models.CharField(max_length=255)
     content = JSONField()
@@ -58,8 +58,13 @@ class Post(models.Model):
     def __str__(self):
         return f"{self.title} - author: {self.author.full_name}"
 
+    @property
     def is_public(self):
         return self.visibility == self.PUBLIC
+
+    @property
+    def is_private(self):
+        return self.visibility == self.PRIVATE
 
 
 class Tag(models.Model):
