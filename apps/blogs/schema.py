@@ -3,6 +3,8 @@ from graphene_django import DjangoObjectType
 from graphql import GraphQLError
 from graphql_jwt.decorators import login_required
 
+from django.core.paginator import Paginator
+
 from .models import Post, Tag
 
 
@@ -38,12 +40,24 @@ class BlogTagType(DjangoObjectType):
         model = Tag
 
 
+class PaginatedBlogPostsType(graphene.ObjectType):
+    posts = graphene.List(BlogPostType, required=True)
+    count = graphene.Int(required=True)
+
+
+class PaginatedBlogTagsType(graphene.ObjectType):
+    tags = graphene.List(BlogTagType, required=True)
+    count = graphene.Int(required=True)
+
+
 class Query(graphene.ObjectType):
     blog_post_by_id = graphene.Field(
         BlogPostType, uuid=graphene.UUID(required=True)
     )
-    public_blog_posts = graphene.List(
-        BlogPostType,
+    public_blog_posts = graphene.Field(
+        PaginatedBlogPostsType,
+        page=graphene.Int(required=True),
+        on_each_page=graphene.Int(required=False, default_value=10),
         sort_by=graphene.List(
             graphene.String,
             required=False,
@@ -69,8 +83,10 @@ class Query(graphene.ObjectType):
             description="A list of tag names to filter by (union-type filter)",
         ),
     )
-    my_blog_posts = graphene.List(
-        BlogPostType,
+    my_blog_posts = graphene.Field(
+        PaginatedBlogPostsType,
+        page=graphene.Int(required=True),
+        on_each_page=graphene.Int(required=False, default_value=10),
         sort_by=graphene.List(
             graphene.String,
             required=False,
@@ -93,7 +109,11 @@ class Query(graphene.ObjectType):
             description="A list of tag names to filter by (union-type filter)",
         ),
     )
-    blog_tags = graphene.List(BlogTagType)
+    blog_tags = graphene.Field(
+        PaginatedBlogTagsType,
+        page=graphene.Int(required=True),
+        on_each_page=graphene.Int(required=False, default_value=10),
+    )
 
     @login_required
     def resolve_blog_post_by_id(self, info, uuid):
@@ -141,10 +161,18 @@ class Query(graphene.ObjectType):
         if tag_names:
             filter_dict["tags__name__in"] = tag_names
 
-        return (
+        posts = (
             Post.objects.filter(visibility=Post.PUBLIC, **filter_dict)
             .distinct()
             .order_by(*sort_by)
+        )
+
+        on_each_page, page = kwargs.get("on_each_page"), kwargs.get("page")
+
+        pag = Paginator(posts, on_each_page)
+
+        return PaginatedBlogPostsType(
+            posts=pag.page(page).object_list, count=pag.count
         )
 
     @login_required
@@ -174,12 +202,27 @@ class Query(graphene.ObjectType):
         if tag_names:
             filter_dict["tags__name__in"] = tag_names
 
-        return (
+        posts = (
             user.blog_posts.filter(**filter_dict).distinct().order_by(*sort_by)
         )
 
-    def resolve_blog_tags(self, info):
-        return Tag.objects.all()
+        on_each_page, page = kwargs.get("on_each_page"), kwargs.get("page")
+
+        pag = Paginator(posts, on_each_page)
+
+        return PaginatedBlogPostsType(
+            posts=pag.page(page).object_list, count=pag.count
+        )
+
+    def resolve_blog_tags(self, info, **kwargs):
+        tags = Tag.objects.all()
+
+        on_each_page, page = kwargs.get("on_each_page"), kwargs.get("page")
+        pag = Paginator(tags, on_each_page)
+
+        return PaginatedBlogTagsType(
+            tags=pag.page(page).object_list, count=pag.count
+        )
 
 
 class CreateBlogPost(graphene.Mutation):
