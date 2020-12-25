@@ -229,6 +229,10 @@ AWS_DDB_PROFILE_ANALYSIS_TABLE = (
     env("AWS_DDB_PROFILE_ANALYSIS_TABLE", default="profile-analysis")
     + f"-{'prod' if DEBUG is False else 'dev'}"
 )
+AWS_DDB_REPO_ANALYSIS_TABLE = (
+    env("AWS_DDB_REPO_ANALYSIS_TABLE", default="repos")
+    + f"-{'prod' if DEBUG is False else 'dev'}"
+)
 
 AWS_SES_REGION_ENDPOINT = f"email.{AWS_DEFAULT_REGION}.amazonaws.com"
 AWS_SES_RESET_PASSWORD_EMAIL = "Hyperlog Support <support@hyperlog.io>"

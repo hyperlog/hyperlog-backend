@@ -31,7 +31,6 @@ from apps.base.utils import (
 )
 from apps.profiles.utils import (
     dynamodb_add_selected_repos_to_profile_analysis_table,
-    dynamodb_convert_boto_dict_to_python_dict,
     dynamodb_get_profile,
     stack_overflow_get_user_data,
     trigger_analysis,
@@ -128,9 +127,7 @@ class Query(graphene.ObjectType):
 
     @login_required
     def resolve_profile_analyses_used(self, info, **kwargs):
-        user_profile = dynamodb_convert_boto_dict_to_python_dict(
-            dynamodb_get_profile(info.context.user.id)
-        )
+        user_profile = dynamodb_get_profile(info.context.user.id)
         return user_profile["turn"]
 
     @login_required
