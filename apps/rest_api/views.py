@@ -168,7 +168,7 @@ def get_single_repo(request, user_id, repo_full_name_b64):
         - pushed_at: datetime
         - stargazers_count: int
         - contributors: map
-        - tech: map
+        - tech_stack: map ({"tech": {...}, "tags": {...}, "libs": {...}})
     """
     UserModel = get_user_model()
 
@@ -215,9 +215,9 @@ def get_single_repo(request, user_id, repo_full_name_b64):
 
     tech = getattr(user, "tech_analysis", None)
     if tech and repo_full_name in tech.repos:
-        repo["tech"] = tech.repos[repo_full_name]
+        repo["tech_stack"] = tech.repos[repo_full_name]
     else:
-        repo["tech"] = None
+        repo["tech_stack"] = None
 
     return JsonResponse(repo)
 
