@@ -1,14 +1,21 @@
 import base64
+import json
 import logging
 from binascii import Error as Base64Error
 
 from django.contrib.auth import get_user_model
 from django.http import Http404, HttpResponseBadRequest, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
 
+from apps.profiles.models import TechAnalysis
 from apps.profiles.utils import (
     dynamodb_get_profile_analysis,
     dynamodb_get_repo_analysis,
+)
+from apps.rest_api.utils import (
+    validate_tech_analysis_data,
+    require_techanalysis_auth,
 )
 
 
@@ -166,7 +173,7 @@ def get_single_repo(request, user_id, repo_full_name_b64):
     UserModel = get_user_model()
 
     try:
-        user = UserModel.objects.get(id=user_id)  # noqa: F841
+        user = UserModel.objects.get(id=user_id)
     except UserModel.DoesNotExist:
         raise Http404()
 
@@ -206,7 +213,73 @@ def get_single_repo(request, user_id, repo_full_name_b64):
         logger.exception(f"Repo not found {repo_full_name}")
         raise Http404()
 
-    # TODO: Add tech-analysis stuff here
-    repo["tech"] = None
+    tech = getattr(user, "tech_analysis", None)
+    if tech and repo_full_name in tech.repos:
+        repo["tech"] = tech.repos[repo_full_name]
+    else:
+        repo["tech"] = None
 
     return JsonResponse(repo)
+
+
+@require_techanalysis_auth
+@csrf_exempt
+def add_tech_analysis_repo(request, user_id):
+    """
+    POST /tech_analysis/<uuid:user_id>/add_repo/
+
+    Data format (JSON):
+
+    {
+        "repo_full_name": "<ownerName>/<repoName>",
+        "libs": {
+            "js.lib_x": {
+                "deletions": 100, "insertions": 123
+            },
+            "py.lib_y": {
+                "deletions": 120, "insertions": 130
+            }
+        },
+        "tech": {
+            "tech_x": {
+                "deletions": 10, "insertions": 20
+            }
+        },
+        "tags": {
+            "tag_x": {
+                "deletions": 5, insertions: 2
+            }
+        }
+    }
+    """
+    if request.method == "POST":
+        UserModel = get_user_model()
+        try:
+            user = UserModel.objects.get(id=user_id)
+        except UserModel.DoesNotExist:
+            raise Http404()
+
+        # Not hiding the endpoint (with 404) after this point
+        data = json.loads(request.body.decode("utf-8"))
+        try:
+            validate_tech_analysis_data(data)
+        except AssertionError:
+            logger.exception(f"Couldn't validate tech analysis data: {data}")
+            return HttpResponseBadRequest()
+
+        if hasattr(user, "tech_analysis"):
+            tech_analysis = user.tech_analysis
+        else:
+            tech_analysis = TechAnalysis(user=user)
+
+        repo_name = data["repo_full_name"]
+        tech_analysis.repos[repo_name] = {
+            "libs": data["libs"],
+            "tech": data["tech"],
+            "tags": data["tags"],
+        }
+
+        tech_analysis.save()
+        return JsonResponse({"success": True})
+    else:
+        raise Http404()

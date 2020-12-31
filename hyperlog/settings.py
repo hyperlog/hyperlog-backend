@@ -248,6 +248,10 @@ AWS_SNS_USER_DELETE_TOPIC = (
 )
 
 
+# TECH ANALYSIS
+TECH_ANALYSIS_AUTH_HASH = env("TECH_ANALYSIS_AUTH_HASH")
+
+
 # Sentry
 
 sentry_sdk.init(

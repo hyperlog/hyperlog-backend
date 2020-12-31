@@ -11,4 +11,7 @@ urlpatterns = [
         "single_repo/<uuid:user_id>/<str:repo_full_name_b64>/",
         views.get_single_repo,
     ),
+    path(
+        "tech_analysis/<uuid:user_id>/add_repo/", views.add_tech_analysis_repo
+    ),
 ]
