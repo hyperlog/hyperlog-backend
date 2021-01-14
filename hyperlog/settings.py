@@ -26,6 +26,9 @@ env = environ.Env()
 env.read_env(os.path.join(BASE_DIR, ".env"))
 
 
+# Should be one of "dev", "prod", "test"
+ENV = env("DJANGO_ENV", default="prod")
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 

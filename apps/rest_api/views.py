@@ -16,16 +16,18 @@ from apps.profiles.utils import (
 from apps.rest_api.utils import (
     validate_tech_analysis_data,
     require_techanalysis_auth,
+    dynamic_cors_middleware,
 )
 
 
 logger = logging.getLogger(__name__)
 
 
+@dynamic_cors_middleware
 @require_GET
-def get_user_info(request, user_id):
+def get_user_info(request):
     """
-    GET /user_info/<uuid:user_id>/
+    GET /user_info/
 
     Return user info as a JSON object.
     Fields:
@@ -38,16 +40,8 @@ def get_user_info(request, user_id):
             - phone
             - address
         }
-
-    UUID param needs to be properly formatted with lowercase and dashes
     """
-    UserModel = get_user_model()
-
-    try:
-        user = UserModel.objects.get(id=user_id)
-    except UserModel.DoesNotExist:
-        raise Http404()
-
+    user = request._portfolio_user
     contact_info = getattr(user, "contact_info", None)
 
     return JsonResponse(
@@ -67,10 +61,11 @@ def get_user_info(request, user_id):
     )
 
 
+@dynamic_cors_middleware
 @require_GET
-def get_user_socials(request, user_id):
+def get_user_socials(request):
     """
-    GET /user_socials/<uuid:user_id>/
+    GET /user_socials/
 
     Return user's social links as a JSON object ({ provider -> username })
     Supported connections:
@@ -85,20 +80,16 @@ def get_user_socials(request, user_id):
     See `apps -> users -> models.py -> User Model -> SUPPORTED_SOCIAL_LINKS`
     for an authoritative list of supported connections.
     """
-    UserModel = get_user_model()
-
-    try:
-        user = UserModel.objects.get(id=user_id)
-    except UserModel.DoesNotExist:
-        raise Http404()
+    user = request._portfolio_user
 
     return JsonResponse(user.social_links)
 
 
+@dynamic_cors_middleware
 @require_GET
-def get_selected_repos(request, user_id):
+def get_selected_repos(request):
     """
-    GET /selected_repos/<uuid:user_id>/
+    GET /selected_repos/
 
     on_each_page = 100
 
@@ -112,13 +103,7 @@ def get_selected_repos(request, user_id):
         - primary_language: "JavaScript"
         - visibility: "public"
     """
-    UserModel = get_user_model()
-
-    try:
-        user = UserModel.objects.get(id=user_id)
-    except UserModel.DoesNotExist:
-        raise Http404()
-
+    user = request._portfolio_user
     prof_an = dynamodb_get_profile_analysis(
         user.id, AttributesToGet=["repos", "selectedRepos"]
     )
@@ -141,10 +126,11 @@ def get_selected_repos(request, user_id):
     return JsonResponse({"count": len(result), "repos": result})
 
 
+@dynamic_cors_middleware
 @require_GET
-def get_single_repo(request, user_id, repo_full_name_b64):
+def get_single_repo(request, repo_full_name_b64):
     """
-    GET /single_repo/<uuid:user_id>/<str:repo_full_name_b64>/
+    GET /single_repo/<str:repo_full_name_b64>/
 
     Repo full name (`owner/repo`) must be base64 encoded
 
@@ -170,12 +156,7 @@ def get_single_repo(request, user_id, repo_full_name_b64):
         - contributors: map
         - tech_stack: map ({"tech": {...}, "tags": {...}, "libs": {...}})
     """
-    UserModel = get_user_model()
-
-    try:
-        user = UserModel.objects.get(id=user_id)
-    except UserModel.DoesNotExist:
-        raise Http404()
+    user = request._portfolio_user
 
     try:
         repo_full_name = base64.urlsafe_b64decode(repo_full_name_b64).decode()

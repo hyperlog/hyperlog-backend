@@ -1,9 +1,14 @@
 import hashlib
+import logging
 import re
 from functools import wraps
 
 from django.conf import settings
 from django.http import Http404
+from django.contrib.auth import get_user_model
+
+
+logger = logging.getLogger("django-restapi")
 
 TECH_ANALYSIS_AUTH_HASH = settings.TECH_ANALYSIS_AUTH_HASH
 
@@ -70,3 +75,58 @@ def require_techanalysis_auth(view_func):
             raise Http404()
 
     return wrapper
+
+
+def dynamic_cors_middleware(get_response):
+    USER_ID_HEADER_KEY = "X-API-KEY"
+    HOSTNAME_PATTERN = (
+        r"^http://([^\.]*)\.localhost"
+        if settings.ENV == "dev"
+        else r"^https://([^\.]*)\.hyperlog\.dev"
+    )
+
+    @wraps(get_response)
+    def middleware(request, *args, **kwargs):
+        origin = request.META.get("HTTP_ORIGIN")
+
+        if not settings.DEBUG and not request.is_secure():
+            logger.warn(
+                f"Got invalid request from {origin}. "
+                f"Missing HTTPS. Meta dump: {request.META}"
+            )
+            raise Http404()
+
+        reg_match = re.match(HOSTNAME_PATTERN, origin)
+        if not reg_match:
+            logger.warn(
+                f"Got invalid request from {origin}. "
+                f"Missing Portfolio user id. Meta dump: {request.META}"
+            )
+            # 404 makes it a little bit harder for outsiders to understand the API  # noqa: E501
+            raise Http404()
+
+        subdomain_username = reg_match.group(1)
+
+        UserModel = get_user_model()
+        user_id = request.headers.get(USER_ID_HEADER_KEY)
+
+        try:
+            portfolio_user = UserModel.objects.get(id=user_id)
+            assert portfolio_user.username == subdomain_username
+        except UserModel.DoesNotExist:
+            logger.warn(
+                f"Got invalid request from {origin}. Wrong Portfolio user id. "
+                f"Meta dump: {request.META}"
+            )
+            raise Http404()
+        except AssertionError:
+            logger.warn(
+                f"Subdomain user ({subdomain_username}) and api-key user "
+                f"({portfolio_user.username}) do not match"
+            )
+            raise Http404()
+
+        request._portfolio_user = portfolio_user
+        return get_response(request, *args, **kwargs)
+
+    return middleware
