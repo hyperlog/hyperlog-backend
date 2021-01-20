@@ -1,5 +1,6 @@
 import logging
 
+import boto3
 import botocore
 import requests
 
@@ -15,6 +16,7 @@ from apps.base.utils import (
 
 DDB_PROFILES_TABLE = settings.AWS_DDB_PROFILES_TABLE
 DDB_PROFILE_ANALYSIS_TABLE = settings.AWS_DDB_PROFILE_ANALYSIS_TABLE
+DDB_REPO_ANALYSIS_TABLE = settings.AWS_DDB_REPO_ANALYSIS_TABLE
 SNS_PROFILE_ANALYSIS_TOPIC = settings.AWS_SNS_PROFILE_ANALYSIS_TOPIC
 
 GITHUB_SUCCESS_TEMPLATE_PATH = "profiles/github_success.html"
@@ -72,67 +74,13 @@ def dynamodb_create_or_update_profile(profile):
 def dynamodb_get_profile(user_id):
     """
     Uses the DynamoDB GetItem API to get the profile data as per the "profiles"
-    table in raw format as returned by boto3
+    table in high level python compatible format
     """
-    client = get_aws_client("dynamodb")
+    ddb = boto3.resource("dynamodb")
 
-    key = {"user_id": {"S": str(user_id)}}
-    response = client.get_item(TableName=DDB_PROFILES_TABLE, Key=key)
+    table = ddb.Table(DDB_PROFILES_TABLE)
+    response = table.get_item(Key={"user_id": str(user_id)})
     return response["Item"]
-
-
-def string_to_int_or_float(s):
-    try:
-        return int(s)
-    except ValueError:
-        return float(s)
-
-
-def dynamodb_process_boto_val(boto_val):
-    if "S" in boto_val:
-        return str(boto_val["S"])
-
-    elif "N" in boto_val:
-        return string_to_int_or_float(boto_val["N"])
-
-    elif "B" in boto_val:
-        return bytes(boto_val["B"])
-
-    elif "BOOL" in boto_val:
-        return bool(boto_val["BOOL"])
-
-    elif "NULL" in boto_val:
-        return None
-
-    elif "SS" in boto_val:
-        return [str(val) for val in boto_val["SS"]]
-
-    elif "NS" in boto_val:
-        return [string_to_int_or_float(val) for val in boto_val["NS"]]
-
-    elif "BS" in boto_val:
-        return [bytes(val) for val in boto_val["BS"]]
-
-    elif "M" in boto_val:
-        return dynamodb_convert_boto_dict_to_python_dict(boto_val["M"])
-
-    elif "L" in boto_val:
-        return [dynamodb_process_boto_val(val) for val in boto_val["L"]]
-
-    else:
-        raise Exception("Unexpected data format: %s" % str(boto_val))
-
-
-def dynamodb_convert_boto_dict_to_python_dict(boto_dict):
-    """
-    Converts a boto3 representation for a DynamoDB item into a python object
-    """
-    python_dict = {}
-
-    for (key, boto_val) in boto_dict.items():
-        python_dict[key] = dynamodb_process_boto_val(boto_val)
-
-    return python_dict
 
 
 def publish_profile_analysis_trigger_to_sns(user_id, github_token):
@@ -199,6 +147,28 @@ def dynamodb_add_selected_repos_to_profile_analysis_table(
     )
 
 
+def dynamodb_get_profile_analysis(user_id, **kwargs):
+    """
+    Get an item form the PROFILE_ANALYSIS table given the user's id
+    """
+    ddb = boto3.resource("dynamodb")
+
+    table = ddb.Table(DDB_PROFILE_ANALYSIS_TABLE)
+    response = table.get_item(Key={"uuid": str(user_id)}, **kwargs)
+    return response["Item"]
+
+
+def dynamodb_get_repo_analysis(repo_full_name, **kwargs):
+    """
+    Get an item from the repo analysis table given the repo_full_name
+    """
+    ddb = boto3.resource("dynamodb")
+
+    table = ddb.Table(DDB_REPO_ANALYSIS_TABLE)
+    response = table.get_item(Key={"full_name": repo_full_name}, **kwargs)
+    return response.get("Item")
+
+
 def trigger_analysis(user, github_token):
     """
     The core logic for Analyse mutation, performs checks and triggers the
@@ -214,9 +184,7 @@ def trigger_analysis(user, github_token):
     """
 
     # Get data from DynamoDB
-    user_profile = dynamodb_convert_boto_dict_to_python_dict(
-        dynamodb_get_profile(user.id)
-    )
+    user_profile = dynamodb_get_profile(user.id)
 
     # Check if an analyse task is already running
     status = user_profile["status"]

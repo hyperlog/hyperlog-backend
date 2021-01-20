@@ -5,6 +5,8 @@ from django.contrib.postgres.fields import JSONField
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
 from django.utils import timezone
 
 from apps.users.models import DeletedUser
@@ -224,3 +226,47 @@ class ContactInfo(models.Model):
     email = models.EmailField(max_length=255, blank=True, default="")
     phone = models.CharField(max_length=25, blank=True, default="")
     address = models.CharField(max_length=255, blank=True, default="")
+
+
+def default_aggregated_analysis():
+    return {"libs": {}, "tech": {}, "tags": {}}
+
+
+class TechAnalysis(models.Model):
+    """Tech analysis for user"""
+
+    user = models.OneToOneField(
+        "users.User", on_delete=models.CASCADE, related_name="tech_analysis"
+    )
+    repos = JSONField(default=dict)
+    aggregated_analysis = JSONField(default=default_aggregated_analysis)
+
+    # NOTE: If queries are slow, check out using GIN index for jsonb fields
+
+
+# Signals
+
+
+@receiver(pre_save, sender=TechAnalysis)
+def add_aggregated_analysis(sender, instance, **kwargs):
+    aggregated_analysis = {"libs": {}, "tech": {}, "tags": {}}
+
+    def get_initial_stats_unit():
+        return {"insertions": 0, "deletions": 0}
+
+    for repo_name, repo in instance.repos.items():
+        for libs_tech_or_tags in {"libs", "tech", "tags"}:
+            for (specific_cat, stats) in repo[libs_tech_or_tags].items():
+                if specific_cat not in aggregated_analysis[libs_tech_or_tags]:
+                    aggregated_analysis[libs_tech_or_tags][
+                        specific_cat
+                    ] = get_initial_stats_unit()
+
+                aggregated_analysis[libs_tech_or_tags][specific_cat][
+                    "insertions"
+                ] += stats["insertions"]
+                aggregated_analysis[libs_tech_or_tags][specific_cat][
+                    "deletions"
+                ] += stats["deletions"]
+
+    instance.aggregated_analysis = aggregated_analysis
