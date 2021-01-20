@@ -38,10 +38,15 @@ SECRET_KEY = env(
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env.bool("DEBUG", default=True)
+DEBUG = False if ENV == "prod" else env.bool("DEBUG", default=True)
 
 ALLOWED_HOSTS = (
-    ["staging.gateway.hyperlog.io", "gateway.hyperlog.io", "localhost"]
+    [
+        "staging.gateway.hyperlog.io",
+        "gateway.hyperlog.io",
+        "localhost",
+        "*.hyperlog.dev",
+    ]
     if DEBUG is False
     else ["*"]
 )
