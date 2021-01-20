@@ -96,6 +96,9 @@ def dynamic_cors_middleware(get_response):
             )
             raise Http404()
 
+        if origin is None:
+            raise Http404()
+
         reg_match = re.match(HOSTNAME_PATTERN, origin)
         if not reg_match:
             logger.warn(

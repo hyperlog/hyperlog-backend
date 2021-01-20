@@ -14,6 +14,7 @@ import os
 from datetime import timedelta
 
 import environ
+from corsheaders.defaults import default_headers
 
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
@@ -96,7 +97,16 @@ CORS_ORIGIN_WHITELIST = [
     "https://app.hyperlog.io",
 ]
 
+CORS_ORIGIN_REGEX_WHITELIST = (
+    [r"^https?://([^\.]*)\.localhost(?:\:.*)?", r"^https?://localhost(?:\:.*)"]
+    if ENV == "dev"
+    else [r"^https://([^\.]*)\.hyperlog\.dev", r"^https?://(.*)\.hyperlog.io"]
+)
+
 CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_HEADERS = list(default_headers) + ["X-API-KEY"]
+
 
 ROOT_URLCONF = "hyperlog.urls"
 
