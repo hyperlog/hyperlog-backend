@@ -78,7 +78,7 @@ def require_techanalysis_auth(view_func):
 
 
 def dynamic_cors_middleware(get_response):
-    USER_ID_HEADER_KEY = "X-API-KEY"
+    USER_ID_HEADER_KEY = "HTTP-X-API-KEY"
     HOSTNAME_PATTERN = (
         r"^http://([^\.]*)\.localhost"
         if settings.ENV == "dev"
@@ -100,22 +100,23 @@ def dynamic_cors_middleware(get_response):
             raise Http404()
 
         reg_match = re.match(HOSTNAME_PATTERN, origin)
-        if not reg_match:
+        if settings.DEBUG is False and not reg_match:
             logger.warn(
                 f"Got invalid request from {origin}. "
-                f"Missing Portfolio user id. Meta dump: {request.META}"
+                f"Hostname pattern wrong. Meta dump: {request.META}"
             )
             # 404 makes it a little bit harder for outsiders to understand the API  # noqa: E501
             raise Http404()
 
-        subdomain_username = reg_match.group(1)
+        subdomain_username = reg_match.group(1) if reg_match else None
 
         UserModel = get_user_model()
         user_id = request.headers.get(USER_ID_HEADER_KEY)
 
         try:
             portfolio_user = UserModel.objects.get(id=user_id)
-            assert portfolio_user.username == subdomain_username
+            if not settings.DEBUG:
+                assert portfolio_user.username == subdomain_username
         except UserModel.DoesNotExist:
             logger.warn(
                 f"Got invalid request from {origin}. Wrong Portfolio user id. "
