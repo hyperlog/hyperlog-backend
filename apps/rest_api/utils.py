@@ -78,7 +78,7 @@ def require_techanalysis_auth(view_func):
 
 
 def dynamic_cors_middleware(get_response):
-    USER_ID_HEADER_KEY = "HTTP-X-API-KEY"
+    USER_ID_HEADER_KEY = "X-API-KEY"
     HOSTNAME_PATTERN = (
         r"^http://([^\.]*)\.localhost"
         if settings.ENV == "dev"
