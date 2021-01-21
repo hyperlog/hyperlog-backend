@@ -14,6 +14,7 @@ import os
 from datetime import timedelta
 
 import environ
+from corsheaders.defaults import default_headers
 
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
@@ -26,6 +27,9 @@ env = environ.Env()
 env.read_env(os.path.join(BASE_DIR, ".env"))
 
 
+# Should be one of "dev", "prod", "test"
+ENV = env("DJANGO_ENV", default="prod")
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
@@ -35,10 +39,15 @@ SECRET_KEY = env(
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env.bool("DEBUG", default=True)
+DEBUG = False if ENV == "prod" else env.bool("DEBUG", default=True)
 
 ALLOWED_HOSTS = (
-    ["staging.gateway.hyperlog.io", "gateway.hyperlog.io", "localhost"]
+    [
+        "staging.gateway.hyperlog.io",
+        "gateway.hyperlog.io",
+        "localhost",
+        "*.hyperlog.dev",
+    ]
     if DEBUG is False
     else ["*"]
 )
@@ -64,6 +73,7 @@ INSTALLED_APPS = [
     "apps.users",
     "apps.profiles",
     "apps.widgets",
+    "apps.messaging",
 ]
 
 MIDDLEWARE = [
@@ -87,7 +97,16 @@ CORS_ORIGIN_WHITELIST = [
     "https://app.hyperlog.io",
 ]
 
+CORS_ORIGIN_REGEX_WHITELIST = (
+    [r"^https?://([^\.]*)\.localhost(?:\:.*)?", r"^https?://localhost(?:\:.*)"]
+    if ENV == "dev"
+    else [r"^https://([^\.]*)\.hyperlog\.dev", r"^https?://(.*)\.hyperlog.io"]
+)
+
 CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_HEADERS = list(default_headers) + ["X-API-KEY"]
+
 
 ROOT_URLCONF = "hyperlog.urls"
 
@@ -228,6 +247,10 @@ AWS_DDB_PROFILE_ANALYSIS_TABLE = (
     env("AWS_DDB_PROFILE_ANALYSIS_TABLE", default="profile-analysis")
     + f"-{'prod' if DEBUG is False else 'dev'}"
 )
+AWS_DDB_REPO_ANALYSIS_TABLE = (
+    env("AWS_DDB_REPO_ANALYSIS_TABLE", default="repos")
+    + f"-{'prod' if DEBUG is False else 'dev'}"
+)
 
 AWS_SES_REGION_ENDPOINT = f"email.{AWS_DEFAULT_REGION}.amazonaws.com"
 AWS_SES_RESET_PASSWORD_EMAIL = "Hyperlog Support <support@hyperlog.io>"
@@ -241,6 +264,10 @@ AWS_SNS_USER_DELETE_TOPIC = (
     env("AWS_SNS_USER_DELETE_TOPIC", default="user_delete")
     + f"-{'prod' if DEBUG is False else 'dev'}"
 )
+
+
+# TECH ANALYSIS
+TECH_ANALYSIS_AUTH_HASH = env("TECH_ANALYSIS_AUTH_HASH")
 
 
 # Sentry
@@ -268,3 +295,11 @@ GRAPHQL_JWT = {
 # JWT
 
 JWT_CUSTOM_COOKIE_MIDDLEWARE_MAX_AGE = 30  # seconds
+
+
+# Telegram
+
+TG_BOT_SOURCE = env("TG_BOT_SOURCE")
+TG_TOKEN_HASH = env("TG_TOKEN_HASH")
+TG_AUTH_SECRET = env("TG_AUTH_SECRET")
+TG_BOT_ENDPOINT = env("TG_BOT_ENDPOINT")

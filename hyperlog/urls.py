@@ -32,4 +32,5 @@ urlpatterns = [
     ),
     path("", include("apps.profiles.urls", namespace="profiles")),
     path("", include("apps.users.urls", namespace="users")),
+    path("rest/", include("apps.rest_api.urls")),
 ]
