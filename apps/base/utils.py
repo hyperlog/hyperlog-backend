@@ -111,15 +111,21 @@ def get_error_messages(error: Exception) -> typing.List[str]:
 
 
 def get_sentinel_user():
-    return get_user_model().objects.get_or_create(
-        username="ghost",
-        defaults={
-            "first_name": "deleted",
-            "last_name": "user",
-            "email": "ghost@hyperlog.io",
-            "password": None,  # Unusable password
-        },
-    )
+    UserModel = get_user_model()
+
+    try:
+        sentinel_user = UserModel.objects.get(username="ghost")
+    except UserModel.DoesNotExist:
+        sentinel_user = UserModel(
+            username="ghost",
+            first_name="deleted",
+            last_name="user",
+            email="ghost@hyperlog.io",
+        )
+        sentinel_user.set_unusable_password()
+        sentinel_user.save()
+
+    return sentinel_user
 
 
 def full_clean_and_save(obj: models.Model) -> typing.Union[Exception, None]:
