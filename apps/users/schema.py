@@ -27,6 +27,7 @@ from apps.users.utils import (
     github_get_user_data,
     github_trade_code_for_token,
     send_reset_password_email,
+    trigger_theme_build,
 )
 
 logger = logging.getLogger(__name__)
@@ -615,6 +616,11 @@ class NextSetupStep(graphene.Mutation):
         user.full_clean()
         user.save()
 
+        # TODO: maybe remove this later and refactor it into a more robust-ly
+        # one-time process like initial anlaysis lambda
+        if user.setup_step == User.SETUP_COMPLETED_STEP:
+            trigger_theme_build(user)
+
         return NextSetupStep(new=user.setup_step)
 
 
@@ -659,7 +665,28 @@ class CompleteSetup(graphene.Mutation):
         user.full_clean()
         user.save()
 
+        # TODO: maybe remove this later and refactor it into a more robust-ly
+        # one-time process like initial anlaysis lambda
+        trigger_theme_build(user)
+
         return CompleteSetup(success=True)
+
+
+class TriggerThemeBuild(graphene.Mutation):
+    success = graphene.Boolean(required=True)
+    message = graphene.String()
+
+    @login_required
+    def mutate(self, info):
+        user = info.context.user
+
+        if user.setup_step == User.SETUP_COMPLETED_STEP:
+            _, ok = trigger_theme_build(user)
+            return TriggerThemeBuild(success=ok)
+        else:
+            return TriggerThemeBuild(
+                success=False, message="User setup not completed"
+            )
 
 
 class Mutation(object):
@@ -687,3 +714,4 @@ class Mutation(object):
     next_setup_step = NextSetupStep.Field()
     previous_setup_step = PreviousSetupStep.Field()
     complete_setup = CompleteSetup.Field()
+    trigger_theme_build = TriggerThemeBuild.Field()
