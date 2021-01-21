@@ -111,7 +111,7 @@ def get_error_messages(error: Exception) -> typing.List[str]:
 
 
 def get_sentinel_user():
-    return get_user_model().get_or_create(
+    return get_user_model().objects.get_or_create(
         username="ghost",
         defaults={
             "first_name": "deleted",
