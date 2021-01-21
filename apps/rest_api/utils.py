@@ -89,13 +89,6 @@ def dynamic_cors_middleware(get_response):
     def middleware(request, *args, **kwargs):
         origin = request.META.get("HTTP_ORIGIN")
 
-        if not settings.DEBUG and not request.is_secure():
-            logger.warn(
-                f"Got invalid request from {origin}. "
-                f"Missing HTTPS. Meta dump: {request.META}"
-            )
-            raise Http404()
-
         if origin is None:
             raise Http404()
 
