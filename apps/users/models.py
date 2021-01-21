@@ -125,7 +125,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         blank=True,
         validators=[validate_social_links],
     )
-    about_page = models.TextField(verbose_name="About Page", blank=True)
+    about = models.TextField(verbose_name="About information", blank=True)
     theme_code = models.CharField(
         verbose_name="Theme Code", max_length=64, default="default",
     )
