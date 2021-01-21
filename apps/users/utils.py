@@ -6,6 +6,7 @@ import botocore
 import requests
 from coolname import generate as generate_readable
 from graphql_jwt.utils import jwt_encode
+from requests.auth import HTTPBasicAuth
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -33,6 +34,11 @@ DDB_PROFILES_TABLE = settings.AWS_DDB_PROFILES_TABLE
 SNS_USER_DELETE_TOPIC = settings.AWS_SNS_USER_DELETE_TOPIC
 RESET_PASSWORD_EMAIL = settings.AWS_SES_RESET_PASSWORD_EMAIL
 REPLYTO_EMAIL = settings.AWS_SES_REPLYTO_EMAIL
+
+THEME_BUILD_TRIGGER_URL = "https://theme-build.hyperlog.io/theme"
+THEME_BUILD_DEFAULT_THEME_NAME = "spectre"
+THEME_BUILD_USERNAME = settings.THEME_BUILD_USERNAME
+THEME_BUILD_PASSWORD = settings.THEME_BUILD_PASSWORD
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +121,34 @@ def delete_user(user: User) -> DeletedUser:
         logger.exception("Couldn't publish user_delete SNS event")
 
     return deleted_user
+
+
+def trigger_theme_build(user):
+    uuid = user.id
+    username = user.username
+    theme_name = (
+        THEME_BUILD_DEFAULT_THEME_NAME
+        if user.theme_code == "default"
+        else user.theme_code
+    )
+    r = requests.post(
+        THEME_BUILD_TRIGGER_URL,
+        auth=HTTPBasicAuth(THEME_BUILD_USERNAME, THEME_BUILD_PASSWORD),
+        json={
+            "uuid": str(uuid),
+            "username": username,
+            "themeName": theme_name,
+        },
+    )
+
+    ok = r.status_code == requests.codes.OK
+    if not ok:
+        logger.warn(
+            f"Theme build trigger returned status code {r.status_code}. "
+            f"Content: {r.content}"
+        )
+
+    return r, ok
 
 
 def github_trade_code_for_token(code):
