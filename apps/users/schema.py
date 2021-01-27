@@ -48,7 +48,7 @@ class UserType(DjangoObjectType):
             "login_types",
             "tagline",
             "social_links",
-            "about_page",
+            "about",
             "theme_code",
             "show_avatar",
             "under_construction",
@@ -514,7 +514,7 @@ class SetSocialLinks(graphene.Mutation):
         return SetSocialLinks(success=True)
 
 
-class SetAboutPage(graphene.Mutation):
+class SetAboutInfo(graphene.Mutation):
     """Set the content of About page (in Markdown) for the logged in user"""
 
     success = graphene.Boolean(required=True)
@@ -526,14 +526,14 @@ class SetAboutPage(graphene.Mutation):
     def mutate(self, info, new):
         user = info.context.user
 
-        user.about_page = new
+        user.about = new
         try:
             user.full_clean()
         except ValidationError as e:
             raise GraphQLError(get_error_messages(e)[0])
 
         user.save()
-        return SetAboutPage(success=True)
+        return SetAboutInfo(success=True)
 
 
 class SetThemeCode(graphene.Mutation):
@@ -707,7 +707,7 @@ class Mutation(object):
     get_link_to_create_password = GetLinkToCreatePassword.Field()
     set_tagline = SetTagline.Field()
     set_social_links = SetSocialLinks.Field()
-    set_about_page = SetAboutPage.Field()
+    set_about_info = SetAboutInfo.Field()
     set_theme_code = SetThemeCode.Field()
     set_show_avatar = SetShowAvatar.Field()
     mark_portfolio_as_constructed = MarkPortfolioAsConstructed.Field()

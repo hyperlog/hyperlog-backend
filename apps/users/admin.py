@@ -39,7 +39,7 @@ class UserAdmin(BaseUserAdmin):
                 "fields": [
                     "tagline",
                     "social_links",
-                    "about_page",
+                    "about",
                     "theme_code",
                     "show_avatar",
                     "under_construction",

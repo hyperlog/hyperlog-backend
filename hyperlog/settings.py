@@ -270,6 +270,11 @@ AWS_SNS_USER_DELETE_TOPIC = (
 TECH_ANALYSIS_AUTH_HASH = env("TECH_ANALYSIS_AUTH_HASH")
 
 
+# Analysis Lambdas
+LAMBDA_AUTH_USERNAME = env("LAMBDA_AUTH_USERNAME", default="test")
+LAMBDA_AUTH_PASSWORD_HASH = env("LAMBDA_AUTH_PASSWORD_HASH", default="test")
+
+
 # Sentry
 
 sentry_sdk.init(

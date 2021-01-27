@@ -1,4 +1,5 @@
 import logging
+import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import JSONField
@@ -36,18 +37,14 @@ class BaseProfileModel(models.Model):
     user = models.ForeignKey(
         "users.User", on_delete=models.CASCADE, related_name="profiles"
     )
+    profile_analysis = JSONField(default=dict)
 
     class Meta:
         # There should be only one profile with the same provider and uid pair
-        unique_together = ["_provider", "provider_uid"]
-
-    def clean(self):
-        if self.user.profiles.filter(_provider=self._provider).exists():
-            raise ValidationError(
-                "Your Hyperlog account already has a connected %s account"
-                % self._provider
-            )
-        super().clean()
+        unique_together = [
+            ("_provider", "provider_uid"),
+            ("user", "_provider"),
+        ]
 
     def unique_error_message(self, model_class, unique_check):
         if unique_check == ("_provider", "provider_uid"):
@@ -133,6 +130,21 @@ class StackOverflowProfile(models.Model):
 
     def __str__(self):
         return f"<StackOverflowProfile: {self.id}>"
+
+
+class Repo(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # ID as per provider (e.g. GitHub)
+    provider_repo_id = models.IntegerField(editable=False)
+    provider = models.CharField(max_length=20, editable=False)
+    full_name = models.CharField(max_length=255)
+    repo_analysis = JSONField()
+
+    class Meta:
+        unique_together = ("provider", "provider_repo_id")
+
+    # For speeding up queries by full_name, put an index on the full_name field
 
 
 class Notification(models.Model):
