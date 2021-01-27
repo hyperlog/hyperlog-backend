@@ -265,6 +265,15 @@ AWS_SNS_USER_DELETE_TOPIC = (
     + f"-{'prod' if DEBUG is False else 'dev'}"
 )
 
+AWS_LAMBDA_INITIAL_ANALYSIS_FUNCTION = env(
+    "AWS_LAMBDA_INITIAL_ANALYSIS_FUNCTION",
+    default=f"initial-analysis-{'prod' if ENV == 'prod' else 'dev'}-initialAnalysis",  # noqa: E501
+)
+AWS_LAMBDA_INVOCATION_SOURCE = (
+    env("AWS_LAMBDA_INVOCATION_SOURCE", default="hyperlogio-django-backend")
+    + f"-{ENV}"
+)
+
 
 # TECH ANALYSIS
 TECH_ANALYSIS_AUTH_HASH = env("TECH_ANALYSIS_AUTH_HASH")
