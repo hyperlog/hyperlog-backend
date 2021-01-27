@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import logging
 import re
@@ -11,6 +12,12 @@ from django.contrib.auth import get_user_model
 logger = logging.getLogger("django-restapi")
 
 TECH_ANALYSIS_AUTH_HASH = settings.TECH_ANALYSIS_AUTH_HASH
+LAMBDA_AUTH_USERNAME = settings.LAMBDA_AUTH_USERNAME
+LAMBDA_AUTH_PASSWORD_HASH = settings.LAMBDA_AUTH_PASSWORD_HASH
+
+
+def get_repo_full_name_pattern():
+    return r"^[a-zA-Z0-9_\-\.]+/[a-zA-Z0-9_\-\.]+$"
 
 
 def validate_tech_analysis_data(data):
@@ -52,13 +59,70 @@ def validate_tech_analysis_data(data):
     }
     """
     assert set(data.keys()) == {"repo_full_name", "libs", "tech", "tags"}
-    assert re.match(
-        r"^[a-zA-Z0-9_\-\.]+/[a-zA-Z0-9_\-\.]+$", data["repo_full_name"]
-    )
+    assert re.match(get_repo_full_name_pattern(), data["repo_full_name"])
     for key in ["libs", "tech", "tags"]:
         # passes for empty dicts too
         for _, val in data[key].items():
             assert set(val.keys()) == {"insertions", "deletions"}
+
+
+def validate_profile_analysis_data(data):
+    """
+    Data Format (JSON):
+
+    {
+        "user_profile": {
+            "avatarUrl": str,
+            "bio": str,
+            ...
+        },
+        "repos": {
+            "<ownerName>/<repoName>": {
+                "description": str,
+                "full_name": str,
+                ...
+            }
+        },
+        "selectedRepos": [
+            "<ownerName>/<repoName>",
+            ...
+        ]
+    }
+    """
+    repo_full_name_pattern = get_repo_full_name_pattern()
+
+    required_keys = {"user_profile", "repos"}
+    for key in required_keys:
+        assert key in data, f"Required key {key} absent"
+
+    expected_keys = {"user_profile", "repos", "selectedRepos"}
+    for key in data:
+        assert key in expected_keys, f"Unexpected key {key}"
+
+    for repo_full_name in data["repos"].keys():
+        assert re.match(repo_full_name_pattern, repo_full_name)
+    for repo_full_name in data["selectedRepos"]:
+        assert re.match(repo_full_name_pattern, repo_full_name)
+
+
+def validate_repo_analysis_data(data):
+    """
+    Data Format (JSON):
+
+    {
+        "id": int, # example - 45717250 for tensorflow
+        "analysis": {
+            "full_name": "tensorflow/tensorflow",
+            "archived": false,
+            ...
+        }
+    }
+    """
+    repo_full_name_regex = get_repo_full_name_pattern()
+
+    assert set(data.keys()) == {"id", "analysis"}
+    assert "full_name" in data["analysis"]
+    assert re.match(repo_full_name_regex, data["analysis"]["full_name"])
 
 
 def require_techanalysis_auth(view_func):
@@ -73,6 +137,34 @@ def require_techanalysis_auth(view_func):
             return view_func(request, *args, **kwargs)
         else:
             raise Http404()
+
+    return wrapper
+
+
+def require_lambda_auth(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        auth_header = request.META.get("HTTP_AUTHORIZATION")
+        if not auth_header or not auth_header.lower().startswith("basic "):
+            raise Http404()
+
+        auth = auth_header[6:]
+        if auth:
+            try:
+                auth = base64.b64decode(auth).decode()
+                username, password = auth.split(":")
+            except Exception:
+                logger.exception("Error while trying lambda basic auth")
+                raise Http404()
+
+        if (
+            username == LAMBDA_AUTH_USERNAME
+            and hashlib.sha256(password.encode()).hexdigest()
+            == LAMBDA_AUTH_PASSWORD_HASH
+        ):
+            return view_func(request, *args, **kwargs)
+
+        raise Http404()
 
     return wrapper
 
