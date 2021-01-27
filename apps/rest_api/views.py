@@ -8,14 +8,17 @@ from django.http import Http404, HttpResponseBadRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
 
-from apps.profiles.models import TechAnalysis
+from apps.profiles.models import BaseProfileModel, Repo, TechAnalysis
 from apps.profiles.utils import (
     dynamodb_get_profile_analysis,
     dynamodb_get_repo_analysis,
 )
 from apps.rest_api.utils import (
     validate_tech_analysis_data,
+    validate_profile_analysis_data,
+    validate_repo_analysis_data,
     require_techanalysis_auth,
+    require_lambda_auth,
     dynamic_cors_middleware,
 )
 
@@ -150,7 +153,6 @@ def get_single_repo(request, repo_full_name_b64):
         - homepage: string
         - owner: string
         - description: string
-        - commits: map
         - pushed_at: datetime
         - stargazers_count: int
         - contributors: map
@@ -260,7 +262,118 @@ def add_tech_analysis_repo(request, user_id):
             "tags": data["tags"],
         }
 
+        tech_analysis.full_clean()
         tech_analysis.save()
+        return JsonResponse({"success": True})
+    else:
+        raise Http404()
+
+
+@require_lambda_auth
+@csrf_exempt
+def add_github_profile_analysis(request, user_id):
+    """
+    POST /profile_analysis/github/<uuid:user_id>/
+
+    Data format (JSON):
+
+    {
+        user_profile: {
+            ...
+        },
+        repos: {
+            ...
+        },
+        selectedRepos: {
+            ...
+        }
+    }
+    """
+    if request.method == "POST":
+        UserModel = get_user_model()
+        try:
+            user = UserModel.objects.get(id=user_id)
+        except UserModel.DoesNotExist:
+            raise Http404()
+
+        try:
+            profile = user.profiles.get(_provider="github")
+        except BaseProfileModel.DoesNotExist:
+            raise Http404("GitHub profile isn't connected")
+
+        # Not hiding the endpoint (with 404) after this point
+        data = json.loads(request.body.decode("utf-8"))
+        try:
+            validate_profile_analysis_data(data)
+        except AssertionError:
+            logger.exception(
+                f"Couldn't validate profile analysis data: {data}"
+            )
+            return HttpResponseBadRequest()
+
+        profile.profile_analysis = data
+        profile.full_clean()
+        profile.save()
+
+        return JsonResponse({"success": True})
+    else:
+        raise Http404()
+
+
+@require_lambda_auth
+@csrf_exempt
+def add_github_repo_analysis(request, user_id):
+    """
+    POST /repo_analysis/github/<uuid:user_id>/
+
+    Data format (JSON):
+
+    {
+        id: ...,  (as per GitHub)
+        analysis: {
+            full_name:
+            archived:
+            contributors:
+            ...
+        }
+    }
+    """
+    provider = "github"
+
+    if request.method == "POST":
+        UserModel = get_user_model()
+        try:
+            # Just validate if user id is real
+            UserModel.objects.get(id=user_id)
+        except UserModel.DoesNotExist:
+            raise Http404()
+
+        # Not hiding the endpoint (with 404) after this point
+        data = json.loads(request.body.decode("utf-8"))
+        try:
+            validate_repo_analysis_data(data)
+        except AssertionError:
+            logger.exception(f"Couldn't validate repo analysis data: {data}")
+            return HttpResponseBadRequest()
+
+        repo_id = data["id"]
+        repo_full_name = data["analysis"]["full_name"]
+        try:
+            repo = Repo.objects.get(
+                provider=provider, provider_repo_id=repo_id
+            )
+            repo.full_name = repo_full_name
+            repo.repo_analysis = data["analysis"]
+        except Repo.DoesNotExist:
+            repo = Repo(
+                provider=provider,
+                provider_repo_id=repo_id,
+                full_name=repo_full_name,
+                repo_analysis=data["analysis"],
+            )
+
+        repo.full_clean()
+        repo.save()
         return JsonResponse({"success": True})
     else:
         raise Http404()
