@@ -190,16 +190,6 @@ def trigger_analysis(user, github_token):
     Does not create the ProfileAnalysis database object, that will have to be
     done manually from the mutations in which this is used
     """
-
-    # Get data from DynamoDB
-    user_profile = dynamodb_get_profile(user.id)
-
-    # Check if an analyse task is already running
-    status = user_profile["status"]
-    if status == "in_progress":
-        error = "You already have an analysis running. Please wait"
-        return {"success": False, "errors": [error]}
-
     # Publish user id and github token to SNS topic
     try:
         response = publish_profile_analysis_trigger_to_sns(
