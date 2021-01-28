@@ -395,9 +395,9 @@ class AddProject(graphene.Mutation):
         repos = graphene.NonNull(
             graphene.List(graphene.NonNull(graphene.String))
         )
-        tagline = graphene.String(default="")
-        description = graphene.String(default="")
-        icon = graphene.String(default="")
+        tagline = graphene.String(default_value="")
+        description = graphene.String(default_value="")
+        icon = graphene.String(default_value="")
 
     def mutate(self, info, name, repos, tagline, description, icon):
         user = info.context.user
@@ -455,7 +455,7 @@ class AddProject(graphene.Mutation):
 
         if not icon:
             if gh_profile.profile_analysis:
-                icon = gh_profile.profile_analysis["user_profile"]["imageUrl"]
+                icon = gh_profile.profile_analysis["user_profile"]["avatarUrl"]
             else:
                 icon = f"https://avatars.githubusercontent.com/u/{gh_profile.provider_uid}?s=400&v=4"  # noqa: E501
 
@@ -469,10 +469,10 @@ class AddProject(graphene.Mutation):
             description=description,
             icon=icon,
         )
-        project.repos.add(*actual_repos)
-
         project.full_clean()
         project.save()
+
+        project.repos.add(*actual_repos)
 
         return AddProject(project=project, messages=messages)
 
