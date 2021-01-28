@@ -13,7 +13,7 @@ urlpatterns = [
     ),
     path(
         "profile_analysis/github/<uuid:user_id>/",
-        views.add_github_profile_analysis,
+        views.github_profile_analysis,
     ),
     path(
         "repo_analysis/github/<uuid:user_id>/", views.add_github_repo_analysis
