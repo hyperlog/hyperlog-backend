@@ -10,6 +10,7 @@ from graphql_jwt.decorators import staff_member_required, login_required
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator
+from django.db import transaction
 
 from apps.profiles.models import (
     BaseProfileModel,
@@ -470,9 +471,10 @@ class AddProject(graphene.Mutation):
             icon=icon,
         )
         project.full_clean()
-        project.save()
 
-        project.repos.add(*actual_repos)
+        with transaction.atomic():
+            project.save()
+            project.repos.add(*actual_repos)
 
         return AddProject(project=project, messages=messages)
 
