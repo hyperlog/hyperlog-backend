@@ -19,6 +19,8 @@ from apps.profiles.models import (
     ProfileAnalysis,
     StackOverflowProfile,
     ContactInfo,
+    Project,
+    Repo,
 )
 from apps.base.schema import GenericResultMutation
 from apps.base.utils import (
@@ -30,6 +32,8 @@ from apps.base.utils import (
 from apps.profiles.utils import (
     stack_overflow_get_user_data,
     trigger_analysis,
+    get_or_create_repo_from_github,
+    get_project_slug_by_name,
 )
 
 STACK_OVERFLOW_TOKEN_URL = "https://stackoverflow.com/oauth/access_token/json"
@@ -87,6 +91,16 @@ class ContactInfoType(DjangoObjectType):
         model = ContactInfo
 
 
+class RepoType(DjangoObjectType):
+    class Meta:
+        model = Repo
+
+
+class ProjectType(DjangoObjectType):
+    class Meta:
+        model = Project
+
+
 class Query(graphene.ObjectType):
     profile = graphene.Field(ProfileType, id=graphene.Int(required=True))
 
@@ -102,6 +116,8 @@ class Query(graphene.ObjectType):
         order_by=graphene.List(graphene.String, default_value=["-time"]),
         is_archived=graphene.Boolean(),
     )
+
+    projects = graphene.Field(graphene.List(ProjectType, required=True))
 
     def resolve_notification(self, info, **kwargs):
         return Notification.objects.get(id=kwargs.get("id"))
@@ -130,6 +146,12 @@ class Query(graphene.ObjectType):
             count=pag.count,
             pages=pag.num_pages,
         )
+
+    @login_required
+    def resolve_projects(self, info):
+        user = info.context.user
+
+        return user.projects.all()
 
 
 class DeleteGithubProfile(GenericResultMutation):
@@ -364,6 +386,188 @@ class AddContactInfo(graphene.Mutation):
         return AddContactInfo(contact_info=ci)
 
 
+class AddProject(graphene.Mutation):
+    project = graphene.Field(ProjectType, required=True)
+    messages = graphene.List(graphene.NonNull(graphene.String))
+
+    class Arguments:
+        name = graphene.String(required=True)
+        repos = graphene.NonNull(
+            graphene.List(graphene.NonNull(graphene.String))
+        )
+        tagline = graphene.String(default="")
+        description = graphene.String(default="")
+        icon = graphene.String(default="")
+
+    def mutate(self, info, name, repos, tagline, description, icon):
+        user = info.context.user
+        messages = []
+
+        try:
+            gh_profile = user.profiles.get(_provider="github")
+        except BaseProfileModel.DoesNotExist:
+            raise GraphQLError("GitHub Profile isn't connected!")
+
+        # Iterate over and validate all repos first
+        for repo_full_name in repos:
+            if repo_full_name not in gh_profile.profile_analysis.get(
+                "repos", []
+            ):
+                raise GraphQLError(f"Unexpected repo {repo_full_name}")
+
+        github_token = gh_profile.access_token
+
+        # TODO: just take the repos now which need to be scanned anew
+        actual_repos = []
+        for repo_full_name in repos:
+            try:
+                repo, _ = get_or_create_repo_from_github(
+                    repo_full_name, github_token
+                )
+                actual_repos.append(repo)
+            except Exception:
+                logger.exception(f"Couldn't get repo {repo_full_name}")
+                messages.append(f"Couldn't process repo {repo_full_name}")
+
+        gh_profile.profile_analysis["selectedRepos"] = [
+            repo.full_name for repo in actual_repos
+        ]
+        gh_profile.full_clean()
+        gh_profile.save()
+
+        # Now run repo analysis on them
+        github_token = gh_profile.access_token
+        analysis_result = trigger_analysis(
+            user, github_token
+        )  # fingers crossed
+        if analysis_result["success"]:
+            # Save the analysis log to database (mostly for logging timestamp)
+            save_analysis = create_model_object(ProfileAnalysis, user=user)
+            if not save_analysis.success:
+                logger.critical(
+                    "Unable to save ProfileAnalysis to db, errors:\n%(errors)s"
+                    % {"errors": "\n".join(save_analysis.errors)}
+                )
+        else:
+            logger.error(
+                f"Unable to trigger repo analysis for user {user} and token {github_token}"  # noqa: E501
+            )
+
+        if not icon:
+            if gh_profile.profile_analysis:
+                icon = gh_profile.profile_analysis["user_profile"]["imageUrl"]
+            else:
+                icon = f"https://avatars.githubusercontent.com/u/{gh_profile.provider_uid}?s=400&v=4"  # noqa: E501
+
+        slug = get_project_slug_by_name(name)
+
+        project = Project(
+            slug=slug,
+            name=name,
+            user=user,
+            tagline=tagline if tagline else name,
+            description=description,
+            icon=icon,
+        )
+        project.repos.add(*actual_repos)
+
+        project.full_clean()
+        project.save()
+
+        return AddProject(project=project, messages=messages)
+
+
+class UpdateProject(graphene.Mutation):
+    project = graphene.Field(ProjectType, required=True)
+    messages = graphene.List(graphene.NonNull(graphene.String))
+
+    class Arguments:
+        slug = graphene.String(required=True)
+        name = graphene.String()
+        repos = graphene.NonNull(
+            graphene.List(graphene.NonNull(graphene.String))
+        )
+        tagline = graphene.String()
+        description = graphene.String()
+        icon = graphene.String()
+
+    def mutate(self, info, slug, **kwargs):
+        user = info.context.user
+        messages = []
+
+        try:
+            project = user.projects.get(slug=slug)
+        except Project.DoesNotExist:
+            raise GraphQLError(f"Project {slug} not found")
+
+        for key in kwargs:
+            if key == "repos":
+                repos = kwargs[key]
+                try:
+                    gh_profile = user.profiles.get(_provider="github")
+                except BaseProfileModel.DoesNotExist:
+                    raise GraphQLError("GitHub Profile isn't connected!")
+
+                # Iterate over and validate all repos first
+                for repo_full_name in repos:
+                    if repo_full_name not in gh_profile.profile_analysis.get(
+                        "repos", []
+                    ):
+                        raise GraphQLError(f"Unexpected repo {repo_full_name}")
+
+                github_token = gh_profile.access_token
+
+                # TODO: just take the repos now which need to be scanned anew
+                actual_repos = []
+                for repo_full_name in repos:
+                    try:
+                        repo, _ = get_or_create_repo_from_github(
+                            repo_full_name, github_token
+                        )
+                        actual_repos.append(repo)
+                    except Exception:
+                        logger.exception(f"Couldn't get repo {repo_full_name}")
+                        messages.append(
+                            f"Couldn't process repo {repo_full_name}"
+                        )
+
+                gh_profile.profile_analysis["selectedRepos"] = [
+                    repo.full_name for repo in actual_repos
+                ]
+                gh_profile.full_clean()
+                gh_profile.save()
+
+                # Now run repo analysis on them
+                github_token = gh_profile.access_token
+                analysis_result = trigger_analysis(
+                    user, github_token
+                )  # fingers crossed
+                if analysis_result["success"]:
+                    # Save the analysis log to database
+                    save_analysis = create_model_object(
+                        ProfileAnalysis, user=user
+                    )
+                    if not save_analysis.success:
+                        logger.critical(
+                            "Unable to save ProfileAnalysis to db, errors:\n%(errors)s"  # noqa: E501
+                            % {"errors": "\n".join(save_analysis.errors)}
+                        )
+                else:
+                    logger.error(
+                        f"Unable to trigger repo analysis for user {user} and token {github_token}"  # noqa: E501
+                    )
+
+                project.repos.add(*actual_repos)
+
+            else:
+                setattr(project, key, kwargs[key])
+
+        project.full_clean()
+        project.save()
+
+        return UpdateProject(project=project, messages=messages)
+
+
 class Mutation(graphene.ObjectType):
     delete_github_profile = DeleteGithubProfile.Field()
     create_notification = CreateNotification.Field()
@@ -372,3 +576,5 @@ class Mutation(graphene.ObjectType):
     connect_stackoverflow = ConnectStackOverflow.Field()
     toggle_archive_outsider_message = ToggleArchiveOutsiderMessage.Field()
     add_contact_info = AddContactInfo.Field()
+    add_project = AddProject.Field()
+    update_project = UpdateProject.Field()

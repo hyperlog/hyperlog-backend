@@ -6,7 +6,8 @@ from django.contrib.postgres.fields import JSONField
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models.signals import pre_save
+from django.db.models.signals import m2m_changed, pre_save
+from django.db.utils import IntegrityError
 from django.dispatch import receiver
 from django.utils import timezone
 
@@ -139,12 +140,24 @@ class Repo(models.Model):
     provider_repo_id = models.IntegerField(editable=False)
     provider = models.CharField(max_length=20, editable=False)
     full_name = models.CharField(max_length=255)
-    repo_analysis = JSONField()
+    repo_analysis = JSONField(default=dict)
 
     class Meta:
         unique_together = ("provider", "provider_repo_id")
 
     # For speeding up queries by full_name, put an index on the full_name field
+
+
+class Project(models.Model):
+    slug = models.CharField(max_length=120, primary_key=True, editable=False)
+    name = models.CharField(max_length=100)
+    user = models.ForeignKey(
+        get_user_model(), related_name="projects", on_delete=models.CASCADE
+    )
+    repos = models.ManyToManyField(Repo, related_name="projects")
+    tagline = models.CharField(max_length=200)
+    description = models.CharField(max_length=2000, blank=True)
+    icon = models.URLField()  # max_length is defaulted at 200
 
 
 class Notification(models.Model):
@@ -282,3 +295,18 @@ def add_aggregated_analysis(sender, instance, **kwargs):
                 ] += stats["deletions"]
 
     instance.aggregated_analysis = aggregated_analysis
+
+
+@receiver(m2m_changed, sender=Project.repos.through)
+def verify_repo_user_unique_together(sender, **kwargs):
+    project = kwargs.get("instance")
+    action = kwargs.get("action")
+    repo_ids = kwargs.get("pk_set")
+
+    if action == "pre_add":
+        if Project.objects.filter(
+            repos__in=repo_ids, user=project.user
+        ).exists():
+            raise IntegrityError(
+                f"One of the keys in {repo_ids} violates unique together constraint for repo and user ({project.user.id})"  # noqa: E501
+            )

@@ -4,16 +4,21 @@ import logging
 import boto3
 import botocore
 import requests
+import shortuuid
+from slugify import slugify
 
 from django.conf import settings
 from django.shortcuts import render
 from django.utils import timezone
 
+from apps.base.github import get_github_repo_id
 from apps.base.utils import (
     create_model_object,
     get_aws_client,
     get_or_create_sns_topic_by_topic_name,
 )
+
+from .models import Repo
 
 DDB_PROFILES_TABLE = settings.AWS_DDB_PROFILES_TABLE
 DDB_PROFILE_ANALYSIS_TABLE = settings.AWS_DDB_PROFILE_ANALYSIS_TABLE
@@ -277,3 +282,32 @@ def stack_overflow_get_user_data(token):
             f"Response: {response.json()}"
         )
         return None
+
+
+def get_or_create_repo_from_github(repo_full_name, token):
+    """
+    Create a Repo object and store it into the databse
+    """
+    provider = "github"
+    repo_id = get_github_repo_id(repo_full_name, token)
+
+    try:
+        repo = Repo.objects.get(provider=provider, provider_repo_id=repo_id)
+        created = False
+    except Repo.DoesNotExist:
+        repo = Repo(
+            provider=provider,
+            provider_repo_id=repo_id,
+            full_name=repo_full_name,
+        )
+        repo.full_clean()
+        repo.save()
+        created = True
+
+    return repo, created
+
+
+def get_project_slug_by_name(name):
+    suffix_uuid = shortuuid.ShortUUID().random(length=12)
+    main_slug = slugify(name)[:100]
+    return f"{main_slug}-{suffix_uuid}"

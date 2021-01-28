@@ -13,6 +13,21 @@ def get_rest_url_for_endpoint(route):
     return f"{GITHUB_REST_API_BASE_URL}{route}"
 
 
+def get_github_repo_id(repo_full_name, token=None):
+    """
+    Get repo id for a repo given the full name
+    """
+    owner, repo_name = repo_full_name.split("/")
+
+    headers = None if token is None else {"Authorization": f"token {token}"}
+    url = get_rest_url_for_endpoint(f"/repos/{owner}/{repo_name}")
+
+    r = requests.get(url, headers=headers)
+    r.raise_for_status()
+
+    return r.json()["id"]
+
+
 def execute_github_gql_query(query, token):
     """
     Executes a query against the GitHub GraphQL API and returns the JSON
