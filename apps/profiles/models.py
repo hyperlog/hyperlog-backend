@@ -140,7 +140,7 @@ class Repo(models.Model):
     provider_repo_id = models.IntegerField(editable=False)
     provider = models.CharField(max_length=20, editable=False)
     full_name = models.CharField(max_length=255)
-    repo_analysis = JSONField(default=dict)
+    repo_analysis = JSONField(default=dict, blank=True)
 
     class Meta:
         unique_together = ("provider", "provider_repo_id")
