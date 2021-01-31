@@ -37,7 +37,7 @@ class BaseProfileModel(models.Model):
     user = models.ForeignKey(
         "users.User", on_delete=models.CASCADE, related_name="profiles"
     )
-    profile_analysis = JSONField(default=dict)
+    profile_analysis = JSONField(default=dict, blank=True)
 
     class Meta:
         # There should be only one profile with the same provider and uid pair

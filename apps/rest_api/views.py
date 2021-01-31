@@ -6,7 +6,7 @@ from binascii import Error as Base64Error
 from django.contrib.auth import get_user_model
 from django.http import Http404, HttpResponseBadRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_http_methods
 
 from apps.profiles.models import BaseProfileModel, Repo, TechAnalysis
 from apps.profiles.utils import (
@@ -271,36 +271,47 @@ def add_tech_analysis_repo(request, user_id):
 
 @require_lambda_auth
 @csrf_exempt
-def add_github_profile_analysis(request, user_id):
+@require_http_methods(["GET", "POST"])
+def github_profile_analysis(request, user_id):
     """
+    ---------------------------------------------------------------------------
+    GET /profile_analysis/github/<uuid:user_id>/
+
+    > Get profile analysis of an existing user
+    ---------------------------------------------------------------------------
     POST /profile_analysis/github/<uuid:user_id>/
 
-    Data format (JSON):
+    > Add or update a profile analysis for an existing user
 
+    Expected data input format (JSON):
     {
-        user_profile: {
+        "user_profile": {
             ...
         },
-        repos: {
+        "repos": {
             ...
         },
-        selectedRepos: {
+        "selectedRepos": {
             ...
         }
     }
+    ---------------------------------------------------------------------------
     """
-    if request.method == "POST":
-        UserModel = get_user_model()
-        try:
-            user = UserModel.objects.get(id=user_id)
-        except UserModel.DoesNotExist:
-            raise Http404()
+    UserModel = get_user_model()
+    try:
+        user = UserModel.objects.get(id=user_id)
+    except UserModel.DoesNotExist:
+        raise Http404()
 
-        try:
-            profile = user.profiles.get(_provider="github")
-        except BaseProfileModel.DoesNotExist:
-            raise Http404("GitHub profile isn't connected")
+    try:
+        profile = user.profiles.get(_provider="github")
+    except BaseProfileModel.DoesNotExist:
+        raise Http404("GitHub Profile isn't connected")
 
+    if request.method == "GET":
+        return JsonResponse(profile.profile_analysis)
+
+    elif request.method == "POST":
         # Not hiding the endpoint (with 404) after this point
         data = json.loads(request.body.decode("utf-8"))
         try:
@@ -316,8 +327,6 @@ def add_github_profile_analysis(request, user_id):
         profile.save()
 
         return JsonResponse({"success": True})
-    else:
-        raise Http404()
 
 
 @require_lambda_auth

@@ -101,7 +101,7 @@ def validate_profile_analysis_data(data):
 
     for repo_full_name in data["repos"].keys():
         assert re.match(repo_full_name_pattern, repo_full_name)
-    for repo_full_name in data["selectedRepos"]:
+    for repo_full_name in data.get("selectedRepos", []):
         assert re.match(repo_full_name_pattern, repo_full_name)
 
 
