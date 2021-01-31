@@ -1,3 +1,4 @@
+import json
 import logging
 
 import boto3
@@ -18,6 +19,11 @@ DDB_PROFILES_TABLE = settings.AWS_DDB_PROFILES_TABLE
 DDB_PROFILE_ANALYSIS_TABLE = settings.AWS_DDB_PROFILE_ANALYSIS_TABLE
 DDB_REPO_ANALYSIS_TABLE = settings.AWS_DDB_REPO_ANALYSIS_TABLE
 SNS_PROFILE_ANALYSIS_TOPIC = settings.AWS_SNS_PROFILE_ANALYSIS_TOPIC
+
+LAMBDA_INITIAL_ANALYSIS_FUNCTION = (
+    settings.AWS_LAMBDA_INITIAL_ANALYSIS_FUNCTION
+)
+LAMBDA_INVOCATION_SOURCE = settings.AWS_LAMBDA_INVOCATION_SOURCE
 
 GITHUB_SUCCESS_TEMPLATE_PATH = "profiles/github_success.html"
 GITHUB_FAIL_TEMPLATE_PATH = "profiles/github_fail.html"
@@ -109,9 +115,11 @@ def create_profile_object(profile_model, **kwargs):
 
     if profile_creation.success:
         try:
-            dynamodb_create_or_update_profile(profile_creation.object)
+            invoke_initial_analysis_lambda(profile_creation.object)
         except botocore.exceptions.ClientError:
-            logger.error("DynamoDB exception encountered", exc_info=True)
+            logger.error(
+                "Lambda initial analysis exception encountered", exc_info=True
+            )
 
     return profile_creation
 
@@ -182,16 +190,6 @@ def trigger_analysis(user, github_token):
     Does not create the ProfileAnalysis database object, that will have to be
     done manually from the mutations in which this is used
     """
-
-    # Get data from DynamoDB
-    user_profile = dynamodb_get_profile(user.id)
-
-    # Check if an analyse task is already running
-    status = user_profile["status"]
-    if status == "in_progress":
-        error = "You already have an analysis running. Please wait"
-        return {"success": False, "errors": [error]}
-
     # Publish user id and github token to SNS topic
     try:
         response = publish_profile_analysis_trigger_to_sns(
@@ -207,6 +205,45 @@ def trigger_analysis(user, github_token):
 
     # successfully triggered
     return {"success": True}
+
+
+def invoke_initial_analysis_lambda(profile):
+    # Convert to JSON and then to bytes
+    payload = json.dumps(
+        {
+            "data": {
+                "user_id": str(profile.user.id),
+                f"{profile.provider}_access_token": profile.access_token,
+            },
+            "source": LAMBDA_INVOCATION_SOURCE,
+        }
+    ).encode()
+
+    client = boto3.client("lambda")
+
+    response = client.invoke(
+        FunctionName=LAMBDA_INITIAL_ANALYSIS_FUNCTION,
+        InvocationType="Event",
+        Payload=payload,
+    )
+
+    # InvocationType | StatusCode
+    # ---------------| ----------
+    #   Synchronous  |   200
+    #      Event     |   202
+    #     Dry Run    |   204
+    status_code = response["statusCode"]
+    response_ok = status_code == 202
+
+    if not response_ok:
+        # This better be caught by Sentry - Add LoggingIntegration
+        logger.warning(
+            f"Lambda invocation returned unexpected code {status_code}. "
+            f"Function: {LAMBDA_INITIAL_ANALYSIS_FUNCTION}. "
+            f"Payload: {repr(payload)}"
+        )
+
+    return response_ok
 
 
 def stack_overflow_get_user_data(token):

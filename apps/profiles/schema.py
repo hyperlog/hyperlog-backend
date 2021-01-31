@@ -1,6 +1,5 @@
 import logging
 
-import botocore
 import graphene
 import phonenumbers
 import requests
@@ -26,12 +25,9 @@ from apps.base.utils import (
     create_model_object,
     full_clean_and_save,
     get_error_message,
-    get_error_messages,
     get_model_object,
 )
 from apps.profiles.utils import (
-    dynamodb_add_selected_repos_to_profile_analysis_table,
-    dynamodb_get_profile,
     stack_overflow_get_user_data,
     trigger_analysis,
 )
@@ -99,10 +95,6 @@ class Query(graphene.ObjectType):
     )
     notifications_count = graphene.Int(conditions=graphene.JSONString())
 
-    profile_analyses_used = graphene.Int(
-        description="The number of profile analyses used by the user"
-    )
-
     outsider_messages = graphene.Field(
         PaginatedOutsiderMessagesType,
         page=graphene.Int(required=True),
@@ -124,11 +116,6 @@ class Query(graphene.ObjectType):
     @staff_member_required
     def resolve_profile(self, info, **kwargs):
         return BaseProfileModel.objects.get(id=kwargs.get("id"))
-
-    @login_required
-    def resolve_profile_analyses_used(self, info, **kwargs):
-        user_profile = dynamodb_get_profile(info.context.user.id)
-        return user_profile["turn"]
 
     @login_required
     def resolve_outsider_messages(
@@ -209,7 +196,7 @@ class MarkNotificationAsRead(GenericResultMutation):
 
 
 class SelectRepos(GenericResultMutation):
-    """Mutation to select repos and trigger analysis"""
+    """Mutation to select GitHub repos and trigger analysis"""
 
     class Arguments:
         repos = graphene.NonNull(
@@ -221,41 +208,21 @@ class SelectRepos(GenericResultMutation):
         user = info.context.user
 
         try:
-            result = dynamodb_add_selected_repos_to_profile_analysis_table(
-                user.id, repos
-            )
-            logger.info(
-                f"Added selected repos to dynamodb for user: {user.id}, "
-                f"repos: {repos}\nResponse: {result}"
-            )
-        except AssertionError as e:
-            return SelectRepos(success=False, errors=get_error_messages(e))
-        except botocore.exceptions.ClientError as e:
-            if (
-                e.response["Error"]["Code"]
-                == "ConditionalCheckFailedException"
-            ):
-                logger.exception("Failed conditional check")
-                return SelectRepos(success=False, errors=["Invalid request"])
+            gh_profile = user.profiles.get(_provider="github")
+        except BaseProfileModel.DoesNotExist:
+            raise GraphQLError("GitHub Profile isn't connected!")
 
-            logger.exception("Botocore error")
-            return SelectRepos(success=False, errors=["server error"])
+        for repo in repos:
+            if repo not in gh_profile.profile_analysis.get("repos", []):
+                raise GraphQLError(f"Unexpected repo {repo}")
 
-        # Get the github token if a github account is associated with user
-        if hasattr(user, "profiles"):
-            try:
-                gh_profile = user.profiles.get(_provider="github")
-            except BaseProfileModel.DoesNotExist:
-                error = "No github account is associated with the user"
-                return SelectRepos(success=False, errors=[error])
-        else:
-            error = "No github account is associated with the user"
-            return SelectRepos(success=False, errors=[error])
+        # remove duplicates and then convert to JSON-encodable format
+        gh_profile.profile_analysis["selectedRepos"] = list(set(repos))
+        gh_profile.full_clean()
+        gh_profile.save()
 
         github_token = gh_profile.access_token
-
         analysis_result = trigger_analysis(user, github_token)
-
         if analysis_result["success"]:
             # Save the analysis log to database
             save_analysis = create_model_object(ProfileAnalysis, user=user)
