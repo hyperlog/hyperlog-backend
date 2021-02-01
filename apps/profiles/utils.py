@@ -232,7 +232,7 @@ def invoke_initial_analysis_lambda(profile):
     #   Synchronous  |   200
     #      Event     |   202
     #     Dry Run    |   204
-    status_code = response["statusCode"]
+    status_code = response.get("StatusCode")
     response_ok = status_code == 202
 
     if not response_ok:
