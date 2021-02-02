@@ -5,7 +5,7 @@ import re
 from functools import wraps
 
 from django.conf import settings
-from django.http import Http404
+from django.http import Http404, HttpResponseForbidden
 from django.contrib.auth import get_user_model
 
 
@@ -136,7 +136,7 @@ def require_techanalysis_auth(view_func):
         ):
             return view_func(request, *args, **kwargs)
         else:
-            raise Http404()
+            return HttpResponseForbidden()
 
     return wrapper
 
@@ -146,7 +146,7 @@ def require_lambda_auth(view_func):
     def wrapper(request, *args, **kwargs):
         auth_header = request.META.get("HTTP_AUTHORIZATION")
         if not auth_header or not auth_header.lower().startswith("basic "):
-            raise Http404()
+            return HttpResponseForbidden("Missing or improper authorization")
 
         auth = auth_header[6:]
         if auth:
@@ -155,7 +155,7 @@ def require_lambda_auth(view_func):
                 username, password = auth.split(":")
             except Exception:
                 logger.exception("Error while trying lambda basic auth")
-                raise Http404()
+                return HttpResponseForbidden("Couldn't parse auth credentials")
 
         if (
             username == LAMBDA_AUTH_USERNAME
@@ -164,7 +164,7 @@ def require_lambda_auth(view_func):
         ):
             return view_func(request, *args, **kwargs)
 
-        raise Http404()
+        return HttpResponseForbidden("Invalid auth credentials")
 
     return wrapper
 
@@ -207,13 +207,13 @@ def dynamic_cors_middleware(get_response):
                 f"Got invalid request from {origin}. Wrong Portfolio user id. "
                 f"Meta dump: {request.META}"
             )
-            raise Http404()
+            raise Http404("User not found")
         except AssertionError:
             logger.warn(
                 f"Subdomain user ({subdomain_username}) and api-key user "
                 f"({portfolio_user.username}) do not match"
             )
-            raise Http404()
+            raise Http404("Username does not match with user_id")
 
         request._portfolio_user = portfolio_user
         return get_response(request, *args, **kwargs)
